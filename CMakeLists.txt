@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(ssa-libusb)
+project(ssa-improved)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_GENERATOR_PLATFORM Win32)
 
 # Global defines
-add_definitions(-DWIN32 -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0601)
+add_definitions(-DWIN32 -D_WIN32_WINNT=0x0601)
 
 # Configuration-specific settings
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -30,11 +30,20 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
 add_subdirectory(deps/minhook)
 
 #
+# libusb
+#
+set(LIBUSB_BUILD_SHARED_LIBS OFF)
+add_subdirectory(deps/libusb)
+
+#
 # xinput1_3 proxy DLL (the shim)
 #
 add_library(xinput1_3 SHARED)
 
-target_compile_definitions(xinput1_3 PRIVATE NOMINMAX)
+target_compile_definitions(xinput1_3 PRIVATE
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN
+)
 
 target_include_directories(xinput1_3 PRIVATE
     src
@@ -54,6 +63,7 @@ target_link_libraries(xinput1_3 PRIVATE
     minhook
     hid         # for HidD_* function signatures
     setupapi    # for device enumeration if needed later
+    usb-1.0
 )
 
 if(MSVC)

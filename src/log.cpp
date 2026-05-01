@@ -1,3 +1,4 @@
+#include "log.h"
 #include <iostream>
 #include <fstream>
 #include <cstdarg>
@@ -7,6 +8,8 @@
 #include <iomanip>
 #include <sstream>
 #include <windows.h>
+
+#include "config.h"
 
 namespace ssa
 {
@@ -84,22 +87,19 @@ private:
         s_initialized = true;
 
         std::ofstream log(s_logFilePath);
-        log << "=== Skylanders Spyro's Adventure LibUSB Log ===" << std::endl;
-        log << "Session started: " << timestamp << std::endl;
-        log << "=========================================" << std::endl << std::endl;
+        log << "=== Skylanders Spyro's Adventure Improved Log ===" << std::endl;
+        log << " Session started: " << timestamp << std::endl;
+        log << "=================================================" << std::endl << std::endl;
     }
 
 public:
-    static void Write(const char* format, ...) {
-        if (!s_initialized) {
-            Initialize();
-        }
+    static void Write(LogLevel level, const char* format, va_list args) {
+        if (level > g_config.logLevel) return;
+
+        if (!s_initialized) Initialize();
 
         char buffer[1024];
-        va_list args;
-        va_start(args, format);
         vsnprintf(buffer, sizeof(buffer), format, args);
-        va_end(args);
 
         std::ofstream log(s_logFilePath, std::ios::app);
         log << "[" << GetTimestamp() << "] " << buffer << std::endl;
@@ -110,12 +110,24 @@ std::string Logger::s_logFilePath;
 bool Logger::s_initialized = false;
 
 void Log(const char* format, ...) {
-    char buffer[1024];
     va_list args;
     va_start(args, format);
-    vsnprintf(buffer, sizeof(buffer), format, args);
+    Logger::Write(LogLevel::INFO, format, args);
     va_end(args);
-
-    Logger::Write("%s", buffer);
 }
+
+void LogDebug(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    Logger::Write(LogLevel::DEBUG, format, args);
+    va_end(args);
+}
+
+void LogVerbose(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    Logger::Write(LogLevel::VERBOSE, format, args);
+    va_end(args);
+}
+
 } // namespace ssa

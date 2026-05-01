@@ -1,11 +1,11 @@
 #include <Windows.h>
 
-#include "addresses.h"
 #include "xinput1_3.h"
 #include "log.h"
 #include "MinHook.h"
 #include "patches.h"
-// #include "hooks.h"
+#include "graphics/window_hooks.h"
+#include "libusb/portal_device.h"
 
 static HMODULE g_original_module = nullptr;
 
@@ -39,7 +39,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                 ssa::Log("Failed to load original XInput DLL");
             }
 
-            ssa::InitAddresses();
+            ssa::WriteDefaultConfig();
+            ssa::LoadConfig();
+
             if (!ssa::InitPatchesAndHooks()) {
                 ssa::Log("Failed to initialize patches and hooks - exiting");
                 MessageBox(nullptr, "There was an error setting up the mod. This should not happen."
@@ -54,8 +56,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
         case DLL_PROCESS_DETACH: {
             ssa::Log("DLL unloading");
+            ssa::WindowHooks::ShutdownWindowHooks();
             MH_DisableHook(MH_ALL_HOOKS);
             MH_Uninitialize();
+            // close proxy socket cleanly on exit
+            ssa::Portal::ShutdownProxy();
             if (g_original_module) {
                 FreeLibrary(g_original_module);
                 g_original_module = nullptr;
