@@ -87,14 +87,14 @@ namespace ssa
         CommunicateLogLevel();
     }
 
-    inline void WriteDefaultConfig()
+    inline bool WriteDefaultConfig()
     {
         std::wstring ini = GetConfigPath();
-        if (GetFileAttributesW(ini.c_str()) != INVALID_FILE_ATTRIBUTES) return;
+        if (GetFileAttributesW(ini.c_str()) != INVALID_FILE_ATTRIBUTES) return true; // already exists, fine
 
         // write with comments directly
         FILE* f = nullptr;
-        if (_wfopen_s(&f, ini.c_str(), L"w, ccs=UTF-8") != 0 || !f) return;
+        if (_wfopen_s(&f, ini.c_str(), L"w, ccs=UTF-8") != 0 || !f) return false; // no write access
 
         fwprintf(f,
             L"; Skylanders Spyro's Adventure Improved - Mod Config\n"
@@ -125,5 +125,6 @@ namespace ssa
         fclose(f);
         Log("Wrote default config to %ls", ini.c_str());
         CommunicateLogLevel();
+        return true;
     }
 } // namespace ssa

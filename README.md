@@ -40,42 +40,42 @@
 
 ## Installation
 
-### All platforms
+### SecuROMLoader
+_While technically not required for this mod, it is recommended to download the latest version of [SecuROMLoader](https://github.com/nckstwrt/SecuROMLoader)._
+1. Download the latest release from the [Releases](https://github.com/nckstwrt/SecuROMLoader/releases/latest)
+2. Extract the contents of the ZIP file
+3. Move **only** the `version.dll` file from the extracted folder to your _Skylanders Spyro's Adventure_ installation directory (where `Skylanders.exe` is located)
+   - e.g. `C:/Program Files (x86)/Activision/Skylanders Spyro's Adventure(TM)`
+
+### Windows
 1. Download the latest release from the [Releases](https://github.com/j4ceee/ssa-improved/releases/latest)
 2. Extract the contents of the ZIP file
 3. You will find a folder named `SSA Improved` containing 2 folders (`Windows` & `Linux`), this `README.md` and a license file
-4. Open the folder corresponding to your OS. You will find the following files:
-   - Windows
-     - `xinput1_3.dll`
-     - `version.json`
-   - Linux
-     - `xinput1_3.dll`
-     - `portal_launch.sh`
-     - `portal_proxy.py`
-     - `version.json`
+4. Open the `Windows` folder. You will find the following files:
+   - `xinput1_3.dll`
+   - `version.json`
 5. Move all the files mentioned above to your _Skylanders Spyro's Adventure_ installation directory (where `Skylanders.exe` is located)
    - e.g. `C:/Program Files (x86)/Activision/Skylanders Spyro's Adventure(TM)`
+6. Done🎉 Run the game as administrator at least once to allow the mod to create necessary files and folders
 
 ### Linux / Steam Deck
 _Note: you need to have Python installed on your system (most Linux distributions come with Python pre-installed)_
-
-1. go to your _Skylanders Spyro's Adventure_ installation directory
-2. make `portal_launch.sh` executable 
-   - Steam Deck: right-click the file in the file manager → `Properties` → `Permissions` tab → check `Allow executing file as program` → click `OK`
-3. add _Skylanders Spyro's Adventure_ to Steam
-   - Steam Deck: right-click on `Skylanders.exe` in the file manager → `Add to Steam`
-4. use `Proton 10.0-4` as the compatibility tool for the game (or any other, the mentioned version is confirmed working)
-5. add `./portal_launch.sh %command%` to your launch options for _Skylanders Spyro's Adventure_ in Steam
-
-### SecuROMLoader
-While technically not required for this mod, it is recommended to download the latest version of [SecuROMLoader](https://github.com/nckstwrt/SecuROMLoader).
-1. Download the latest release from the [Releases](https://github.com/nckstwrt/SecuROMLoader/releases/latest)
+1. Download the latest release from the [Releases](https://github.com/j4ceee/ssa-improved/releases/latest)
 2. Extract the contents of the ZIP file
-3. Move the `version.dll` file from the extracted folder to your _Skylanders Spyro's Adventure_ installation directory (where `Skylanders.exe` is located)
-   - e.g. `C:/Program Files (x86)/Activision/Skylanders Spyro's Adventure(TM)`
-
-### Done🎉
-- you can now launch the game
+3. You will find a folder named `SSA Improved` containing 2 folders (`Windows` & `Linux`), this `README.md` and a license file
+4. Open the `Linux` folder. You will find the following files:
+   - `xinput1_3.dll`
+   - `portal_launch.sh`
+   - `portal_proxy.py`
+   - `version.json`
+5. Move all the files mentioned above to your _Skylanders Spyro's Adventure_ installation directory (where `Skylanders.exe` is located)
+6. Inside your _Skylanders Spyro's Adventure_ installation directory make `portal_launch.sh` executable 
+   - Steam Deck: right-click the file in the file manager → `Properties` → `Permissions` tab → check `Allow executing file as program` → click `OK`
+7. add _Skylanders Spyro's Adventure_ to Steam
+   - Steam Deck: right-click on `Skylanders.exe` in the file manager → `Add to Steam`
+8. use `Proton 10.0-4` as the compatibility tool for the game (or any other, the mentioned version is confirmed working)
+9. add `./portal_launch.sh %command%` to your launch options for _Skylanders Spyro's Adventure_ in Steam
+10. Done🎉 You can now launch the game from Steam
 
 ## Credits
 - Developed by [jacee](https://github.com/j4ceee)

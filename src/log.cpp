@@ -69,10 +69,12 @@ private:
         return oss.str();
     }
 
-    static void Initialize() {
-        if (s_initialized) return;
+    static bool Initialize() {
+        if (s_initialized) return true;
 
-        CleanupOldLogs();
+        try {
+            CleanupOldLogs();
+        } catch (...) {}  // non-fatal
 
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
@@ -83,20 +85,25 @@ private:
         char timestamp[64];
         strftime(timestamp, sizeof(timestamp), "%Y-%m-%d_%H-%M-%S", &localTime);
 
-        s_logFilePath = GetLogDirectory() + "\\ssa_log_" + timestamp + ".txt";
-        s_initialized = true;
+        try {
+            s_logFilePath = GetLogDirectory() + "\\ssa_log_" + timestamp + ".txt";
+            std::ofstream log(s_logFilePath);
+            if (!log.is_open()) return false;  // no write access
+            log << "=== Skylanders Spyro's Adventure Improved Log ===" << std::endl;
+            log << " Session started: " << timestamp << std::endl;
+            log << "=================================================" << std::endl << std::endl;
+        } catch (...) {
+            return false;
+        }
 
-        std::ofstream log(s_logFilePath);
-        log << "=== Skylanders Spyro's Adventure Improved Log ===" << std::endl;
-        log << " Session started: " << timestamp << std::endl;
-        log << "=================================================" << std::endl << std::endl;
+        s_initialized = true;
+        return true;
     }
 
 public:
     static void Write(LogLevel level, const char* format, va_list args) {
         if (level > g_config.logLevel) return;
-
-        if (!s_initialized) Initialize();
+        if (!Initialize()) return;
 
         char buffer[1024];
         vsnprintf(buffer, sizeof(buffer), format, args);

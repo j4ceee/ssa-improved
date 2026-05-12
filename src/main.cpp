@@ -39,14 +39,24 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                 ssa::Log("Failed to load original XInput DLL");
             }
 
-            ssa::WriteDefaultConfig();
+            bool filesOk = ssa::WriteDefaultConfig();
             ssa::LoadConfig();
+
+            if (!filesOk) {
+                MessageBox(nullptr,
+                    "The mod could not create its config and log files.\n"
+                    "This is usually because the game folder requires administrator permissions."
+                    "\n\nPlease run the game as Administrator at least once to allow the mod to set itself up or adjust permissions on the game folder."
+                    "\n\nThe game will continue to run, but mod settings will use their defaults.",
+                    "Skylanders Spyros's Adventure Improved",
+                    MB_OK | MB_ICONWARNING);
+            }
 
             if (!ssa::InitPatchesAndHooks()) {
                 ssa::Log("Failed to initialize patches and hooks - exiting");
                 MessageBox(nullptr, "There was an error setting up the mod. This should not happen."
                     "\nMake sure you have the latest and unmodified version of the mod and the game.",
-                    "Skylanders Spyros's Adventure", MB_OK | MB_ICONEXCLAMATION);
+                    "Skylanders Spyros's Adventure Improved", MB_OK | MB_ICONEXCLAMATION);
                 return FALSE;
             }
             ssa::Log("Successfully initialized patches and hooks ");
