@@ -83,7 +83,7 @@ namespace ssa::WindowHooks
 
     inline BOOL WINAPI hook_ShowWindow(HWND hWnd, int nCmdShow)
     {
-        if (g_config.borderless && hWnd == g_hGameWindow && nCmdShow == SW_MINIMIZE) {
+        if (g_config.windowed && g_config.borderless && hWnd == g_hGameWindow && nCmdShow == SW_MINIMIZE) {
             LogDebug("[Window] Suppressed ShowWindow(SW_MINIMIZE)");
             return TRUE;
         }

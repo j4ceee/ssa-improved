@@ -1,6 +1,7 @@
 #pragma once
 #include <Windows.h>
 #include <d3d9.h>
+#include <cmath>
 
 #include "config.h"
 #include "log.h"
@@ -9,27 +10,73 @@
 
 namespace ssa::D3D9Hooks
 {
-    using Direct3DCreate9_t     = IDirect3D9*(WINAPI*)(UINT);
-    using CreateDevice_t        = HRESULT(WINAPI*)(IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9**);
-    using Reset_t               = HRESULT(WINAPI*)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
-    using EndScene_t            = HRESULT(WINAPI*)(IDirect3DDevice9*);
-    using Present_t             = HRESULT(WINAPI*)(IDirect3DDevice9*, const RECT*, const RECT*, HWND, const RGNDATA*);
-    using SetSamplerState_t     = HRESULT(WINAPI*)(IDirect3DDevice9*, DWORD, D3DSAMPLERSTATETYPE, DWORD);
+    // -------------------------------------------------------------------------
+    // function pointer typedefs
+    // -------------------------------------------------------------------------
+    using Direct3DCreate9_t             = IDirect3D9*(WINAPI*)(UINT);
+    using CreateDevice_t                = HRESULT(WINAPI*)(IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9**);
+    using Reset_t                       = HRESULT(WINAPI*)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
+    using EndScene_t                    = HRESULT(WINAPI*)(IDirect3DDevice9*);
+    using Present_t                     = HRESULT(WINAPI*)(IDirect3DDevice9*, const RECT*, const RECT*, HWND, const RGNDATA*);
+    using SetSamplerState_t             = HRESULT(WINAPI*)(IDirect3DDevice9*, DWORD, D3DSAMPLERSTATETYPE, DWORD);
+    using CreateTexture_t               = HRESULT(WINAPI*)(IDirect3DDevice9*, UINT, UINT, UINT, DWORD, D3DFORMAT, D3DPOOL, IDirect3DTexture9**, HANDLE*);
+    using CreateDepthStencilSurface_t   = HRESULT(WINAPI*)(IDirect3DDevice9*, UINT, UINT, D3DFORMAT, D3DMULTISAMPLE_TYPE, DWORD, BOOL, IDirect3DSurface9**, HANDLE*);
+    using SetViewport_t                 = HRESULT(WINAPI*)(IDirect3DDevice9*, const D3DVIEWPORT9*);
+    using SetScissorRect_t              = HRESULT(WINAPI*)(IDirect3DDevice9*, const RECT*);
+    using SetPixelShaderConstantF_t     = HRESULT(WINAPI*)(IDirect3DDevice9*, UINT, const float*, UINT);
 
-    inline Direct3DCreate9_t    orig_Direct3DCreate9    = nullptr;
-    inline CreateDevice_t       orig_CreateDevice       = nullptr;
-    inline Reset_t              orig_Reset              = nullptr;
-    inline EndScene_t           orig_EndScene           = nullptr;
-    inline Present_t            orig_Present            = nullptr;
-    inline SetSamplerState_t    orig_SetSamplerState    = nullptr;
+
+    inline Direct3DCreate9_t           orig_Direct3DCreate9           = nullptr;
+    inline CreateDevice_t              orig_CreateDevice              = nullptr;
+    inline Reset_t                     orig_Reset                     = nullptr;
+    inline EndScene_t                  orig_EndScene                  = nullptr;
+    inline Present_t                   orig_Present                   = nullptr;
+    inline SetSamplerState_t           orig_SetSamplerState           = nullptr;
+    inline CreateTexture_t             orig_CreateTexture             = nullptr;
+    inline CreateDepthStencilSurface_t orig_CreateDepthStencilSurface = nullptr;
+    inline SetViewport_t               orig_SetViewport               = nullptr;
+    inline SetScissorRect_t            orig_SetScissorRect            = nullptr;
+    inline SetPixelShaderConstantF_t   orig_SetPixelShaderConstantF   = nullptr;
+
+    // -------------------------------------------------------------------------
+    // state
+    // -------------------------------------------------------------------------
+    inline int  g_displayRefreshHz  = 0;
+    inline UINT g_bbWidth           = 0;
+    inline UINT g_bbHeight          = 0;
+
+    // internal resolution the game uses for its 3D scene pipeline
+    static constexpr UINT k_internalW = 1120;
+    static constexpr UINT k_internalH = 704;
+
+    // -------------------------------------------------------------------------
+    // dimension scaling table
+    // maps known internal RT/viewport sizes to their scaled equivalents
+    // -------------------------------------------------------------------------
+    inline bool TryScaleDimensions(UINT& w, UINT& h)
+    {
+        struct Entry { UINT sw, sh, dw, dh; };
+        const Entry table[] = {
+            { k_internalW,      k_internalH,        g_bbWidth,      g_bbHeight     },  // main scene RT
+            { k_internalW / 2,  k_internalH / 2,    g_bbWidth / 2,  g_bbHeight / 2 },  // bloom 1 (?)
+            { k_internalW / 4,  k_internalH / 4,    g_bbWidth / 4,  g_bbHeight / 4 },  // bloom 2 (?)
+            { 288,              176,                g_bbWidth / 4,  g_bbHeight / 4 },  // SSAO / screen-space effect
+            { 144,              96,                 g_bbWidth / 8,  g_bbHeight / 8 },  // ?
+        };
+        for (const auto& e : table) {
+            if (w == e.sw && h == e.sh) {
+                w = e.dw;
+                h = e.dh;
+                return true;
+            }
+        }
+        return false;
+    }
 
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
-    inline int g_displayRefreshHz = 0;
-
-    // parameter override logic
     inline void ApplyPresentParams(D3DPRESENT_PARAMETERS* pp)
     {
         if (!pp) return;
@@ -52,6 +99,10 @@ namespace ssa::D3D9Hooks
         }
         // else: leave backbuffer dimensions untouched - game decides
 
+        // save backbuffer dimensions to apply to internal rendering
+        g_bbWidth  = pp->BackBufferWidth;
+        g_bbHeight = pp->BackBufferHeight;
+
         pp->PresentationInterval = g_config.vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
 
         Log("[D3D9] Present params: %dx%d windowed=%d vsync=%d",
@@ -59,10 +110,140 @@ namespace ssa::D3D9Hooks
     }
 
     // -------------------------------------------------------------------------
-    // Hook: SetSamplerState - injects anisotropic filtering
+    // patch a vec4 of texel-size shader constants from the internal resolution to the actual backbuffer resolution
+    // game uses two patterns: (2/W, 2/H, 1/W, 1/H) & (1/W, 1/H, 0.5/W, 0.5/H)
     // -------------------------------------------------------------------------
-    inline HRESULT WINAPI hook_SetSamplerState(
-        IDirect3DDevice9* pDevice, DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD Value)
+    inline bool FixTexelSizeVec4(float* v, UINT bbW, UINT bbH)
+    {
+        // all internal resolution tiers and their scaled equivalents
+        struct Tier { UINT iW, iH, oW, oH; };
+        const Tier tiers[] = {
+            { k_internalW,      k_internalH,        bbW,    bbH     },
+            { k_internalW / 2,  k_internalH / 2,    bbW / 2,bbH / 2 },
+            { k_internalW / 4,  k_internalH / 4,    bbW / 4,bbH / 4 },
+            { 288,              176,                bbW / 4,bbH / 4 },
+            { 144,              96,                 bbW / 8,bbH / 8 },
+        };
+
+        const float eps = 0.01f;
+        auto fNear = [&](float a, float b) { return fabsf(a - b) < fabsf(b) * eps; };
+
+        for (const auto& t : tiers) {
+            const float iW = 1.f / t.iW;
+            const float iH = 1.f / t.iH;
+
+            // pattern: (2/W, 2/H, 1/W, 1/H)
+            if (fNear(v[0], 2*iW) && fNear(v[1], 2*iH) && fNear(v[2], iW) && fNear(v[3], iH)) {
+                float nW = 1.f/t.oW, nH = 1.f/t.oH;
+                v[0] = 2*nW; v[1] = 2*nH; v[2] = nW; v[3] = nH;
+                return true;
+            }
+
+            // pattern: (1/W, 1/H, 0.5/W, 0.5/H)
+            if (fNear(v[0], iW) && fNear(v[1], iH) && fNear(v[2], .5f*iW) && fNear(v[3], .5f*iH)) {
+                float nW = 1.f/t.oW, nH = 1.f/t.oH;
+                v[0] = nW; v[1] = nH; v[2] = .5f*nW; v[3] = .5f*nH;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Hook: SetPixelShaderConstantF - patches texel-size uniforms for nativeRes
+    // -------------------------------------------------------------------------
+    inline HRESULT WINAPI hook_SetPixelShaderConstantF(
+        IDirect3DDevice9* pDevice, UINT StartRegister, const float* pData, UINT Vector4fCount)
+    {
+        if (g_config.nativeRes && g_bbWidth > 0 && g_bbHeight > 0) {
+            // stack-allocate for small batches (typical), heap for large ones
+            float  stackBuf[32 * 4];
+            float* patched = (Vector4fCount <= 32)
+                ? stackBuf
+                : new float[Vector4fCount * 4];
+
+            memcpy(patched, pData, Vector4fCount * 4 * sizeof(float));
+
+            bool any = false;
+            for (UINT i = 0; i < Vector4fCount; i++)
+                if (FixTexelSizeVec4(patched + i * 4, g_bbWidth, g_bbHeight)) any = true;
+
+            HRESULT hr = orig_SetPixelShaderConstantF(pDevice, StartRegister,
+                any ? patched : pData, Vector4fCount);
+
+            if (Vector4fCount > 32) delete[] patched;
+            return hr;
+        }
+        return orig_SetPixelShaderConstantF(pDevice, StartRegister, pData, Vector4fCount);
+    }
+
+    // -------------------------------------------------------------------------
+    // Hook: CreateTexture - scale internal scene RTs to backbuffer size
+    // -------------------------------------------------------------------------
+    inline HRESULT WINAPI hook_CreateTexture(
+        IDirect3DDevice9* pDevice, UINT Width, UINT Height, UINT Levels,
+        DWORD Usage, D3DFORMAT Format, D3DPOOL Pool,
+        IDirect3DTexture9** ppTexture, HANDLE* pSharedHandle)
+    {
+        if ((Usage & D3DUSAGE_RENDERTARGET) && g_config.nativeRes && g_bbWidth > 0 && g_bbHeight > 0)
+            TryScaleDimensions(Width, Height);
+
+        return orig_CreateTexture(pDevice, Width, Height, Levels, Usage, Format, Pool, ppTexture, pSharedHandle);
+    }
+
+    // -------------------------------------------------------------------------
+    // Hook: CreateDepthStencilSurface - scale internal depth surfaces
+    // -------------------------------------------------------------------------
+    inline HRESULT WINAPI hook_CreateDepthStencilSurface(
+        IDirect3DDevice9* pDevice, UINT Width, UINT Height,
+        D3DFORMAT Format, D3DMULTISAMPLE_TYPE MultiSample, DWORD MultisampleQuality,
+        BOOL Discard, IDirect3DSurface9** ppSurface, HANDLE* pSharedHandle)
+    {
+        if (g_config.nativeRes && g_bbWidth > 0 && g_bbHeight > 0)
+            TryScaleDimensions(Width, Height);
+
+        return orig_CreateDepthStencilSurface(pDevice, Width, Height, Format,
+            MultiSample, MultisampleQuality, Discard, ppSurface, pSharedHandle);
+    }
+
+    // -------------------------------------------------------------------------
+    // Hook: SetViewport - scale internal scene viewports
+    // -------------------------------------------------------------------------
+    inline HRESULT WINAPI hook_SetViewport(IDirect3DDevice9* pDevice, const D3DVIEWPORT9* pViewport)
+    {
+        if (pViewport && g_config.nativeRes && g_bbWidth > 0 && g_bbHeight > 0) {
+            UINT w = pViewport->Width, h = pViewport->Height;
+            if (TryScaleDimensions(w, h)) {
+                D3DVIEWPORT9 vp = *pViewport;
+                vp.Width  = w;
+                vp.Height = h;
+                return orig_SetViewport(pDevice, &vp);
+            }
+        }
+        return orig_SetViewport(pDevice, pViewport);
+    }
+
+    // -------------------------------------------------------------------------
+    // Hook: SetScissorRect - scale internal scene scissor rects
+    // -------------------------------------------------------------------------
+    inline HRESULT WINAPI hook_SetScissorRect(IDirect3DDevice9* pDevice, const RECT* pRect)
+    {
+        if (pRect && g_config.nativeRes && g_bbWidth > 0 && g_bbHeight > 0) {
+            UINT w = (UINT)(pRect->right  - pRect->left);
+            UINT h = (UINT)(pRect->bottom - pRect->top);
+            if (TryScaleDimensions(w, h)) {
+                RECT r = { 0, 0, (LONG)w, (LONG)h };
+                return orig_SetScissorRect(pDevice, &r);
+            }
+        }
+        return orig_SetScissorRect(pDevice, pRect);
+    }
+
+    // -------------------------------------------------------------------------
+    // Hook: SetSamplerState - anisotropic filtering + LOD bias
+    // -------------------------------------------------------------------------
+    inline HRESULT WINAPI hook_SetSamplerState(IDirect3DDevice9* pDevice, DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD Value)
     {
         if (g_config.anisotropy > 1) {
             if (Type == D3DSAMP_MINFILTER && Value >= D3DTEXF_POINT) {
@@ -75,18 +256,16 @@ namespace ssa::D3D9Hooks
                 }
             }
             // prevent game from downgrading
-            if (Type == D3DSAMP_MIPFILTER && Sampler != 2 && Value < D3DTEXF_LINEAR) {
+            if (Type == D3DSAMP_MIPFILTER && Sampler != 2 && Value < D3DTEXF_LINEAR)
                 Value = D3DTEXF_LINEAR;
-            }
-            if (Type == D3DSAMP_MAXANISOTROPY && Sampler != 2 && (DWORD)g_config.anisotropy > Value) {
+            if (Type == D3DSAMP_MAXANISOTROPY && Sampler != 2 && (DWORD)g_config.anisotropy > Value)
                 Value = (DWORD)g_config.anisotropy;
-            }
         }
 
         if (g_config.lodBias < 0.0f) {
-            if (Type == D3DSAMP_MINFILTER && Value >= D3DTEXF_POINT) {
-                orig_SetSamplerState(pDevice, Sampler, D3DSAMP_MIPMAPLODBIAS, *reinterpret_cast<const DWORD*>(&g_config.lodBias));
-            }
+            if (Type == D3DSAMP_MINFILTER && Value >= D3DTEXF_POINT)
+                orig_SetSamplerState(pDevice, Sampler, D3DSAMP_MIPMAPLODBIAS,
+                    *reinterpret_cast<const DWORD*>(&g_config.lodBias));
 
             // prevent game from downgrading
             if (Type == D3DSAMP_MIPMAPLODBIAS) {
@@ -100,11 +279,9 @@ namespace ssa::D3D9Hooks
     }
 
     // -------------------------------------------------------------------------
-    // Hook: Present (vtable index 17) - FPS limiter only
+    // Hook: Present - FPS limiter + deferred window setup
     // -------------------------------------------------------------------------
-    inline HRESULT WINAPI hook_Present(
-        IDirect3DDevice9* pDevice,
-        const RECT* pSourceRect, const RECT* pDestRect,
+    inline HRESULT WINAPI hook_Present(IDirect3DDevice9* pDevice, const RECT* pSourceRect, const RECT* pDestRect,
         HWND hDestWindowOverride, const RGNDATA* pDirtyRegion)
     {
         static bool s_windowSetup = false;
@@ -123,12 +300,8 @@ namespace ssa::D3D9Hooks
             if (!s_timer) {
                 s_timer = CreateWaitableTimerExW(nullptr, nullptr,
                     CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
-                if (!s_timer) {
-                    s_timer = CreateWaitableTimerExW(nullptr, nullptr,
-                        0, TIMER_ALL_ACCESS);
-                    Log("[D3D9] Using standard waitable timer (high-res not available)");
-                }
-
+                if (!s_timer)
+                    s_timer = CreateWaitableTimerExW(nullptr, nullptr, 0, TIMER_ALL_ACCESS);
                 if (s_timer) {
                     LARGE_INTEGER now, freq;
                     QueryPerformanceCounter(&now);
@@ -173,8 +346,7 @@ namespace ssa::D3D9Hooks
     // -------------------------------------------------------------------------
     // Hook: Reset
     // -------------------------------------------------------------------------
-    inline HRESULT WINAPI hook_Reset(
-        IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pp)
+    inline HRESULT WINAPI hook_Reset(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pp)
     {
         ApplyPresentParams(pp);
         return orig_Reset(pDevice, pp);
@@ -213,10 +385,15 @@ namespace ssa::D3D9Hooks
                 };
 
                 DeviceHook hooks[] = {
-                    {16, (void*)&hook_Reset, (void**)&orig_Reset, "Reset"},
-                    {17, (void*)&hook_Present, (void**)&orig_Present, "Present"},
-                    // {42, (void*)&hook_EndScene, (void**)&orig_EndScene, "EndScene"}, // TODO: add back when needed
-                    {69, (void*)&hook_SetSamplerState, (void**)&orig_SetSamplerState, "SetSamplerState"},
+                    {  16, (void*)&hook_Reset,                      (void**)&orig_Reset,                    "Reset"                    },
+                    {  17, (void*)&hook_Present,                    (void**)&orig_Present,                  "Present"                  },
+                    {  23, (void*)&hook_CreateTexture,              (void**)&orig_CreateTexture,            "CreateTexture"            },
+                    {  29, (void*)&hook_CreateDepthStencilSurface,  (void**)&orig_CreateDepthStencilSurface,"CreateDepthStencilSurface"},
+                    {  47, (void*)&hook_SetViewport,                (void**)&orig_SetViewport,              "SetViewport"              },
+                    {  69, (void*)&hook_SetSamplerState,            (void**)&orig_SetSamplerState,          "SetSamplerState"          },
+                    {  75, (void*)&hook_SetScissorRect,             (void**)&orig_SetScissorRect,           "SetScissorRect"           },
+                    { 109, (void*)&hook_SetPixelShaderConstantF,    (void**)&orig_SetPixelShaderConstantF,  "SetPixelShaderConstantF"  },
+                    // { 42, (void*)&hook_EndScene, (void**)&orig_EndScene, "EndScene" }, // TODO: add back when needed
                 };
 
                 bool allOk = true;
@@ -239,7 +416,7 @@ namespace ssa::D3D9Hooks
     }
 
     // -------------------------------------------------------------------------
-    // Hook: Direct3DCreate9 - intercept the IDirect3D9 object
+    // Hook: Direct3DCreate9
     // -------------------------------------------------------------------------
     inline IDirect3D9* WINAPI hook_Direct3DCreate9(UINT SDKVersion)
     {
@@ -267,9 +444,8 @@ namespace ssa::D3D9Hooks
     {
         Log("[D3D9] Hooking Direct3DCreate9 API entry point...");
         MH_STATUS s = MH_CreateHookApiEx(L"d3d9.dll", "Direct3DCreate9",
-                                         &hook_Direct3DCreate9, (void**)&orig_Direct3DCreate9, nullptr);
-        if (s != MH_OK)
-        {
+            &hook_Direct3DCreate9, (void**)&orig_Direct3DCreate9, nullptr);
+        if (s != MH_OK) {
             Log("[D3D9] Failed to hook Direct3DCreate9: %d", s);
             return false;
         }

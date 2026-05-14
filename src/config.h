@@ -19,7 +19,9 @@ namespace ssa
         bool vsync = true; // enable vertical sync
         int fpsCap = 0; // 0 = unlimited
         int anisotropy = 8; // 1, 2, 4, 8, 16
-        float lodBias = -1.5f; // texture sharpness: -1.5 = default, 0 = off, -2 = max
+        float lodBias = -1.0f; // texture sharpness: -1.5 = default, 0 = off, -2 = max
+
+        bool nativeRes = true; // should game render at chosen / native resolution internally?
     };
 
     inline Config g_config;
@@ -69,6 +71,7 @@ namespace ssa
         g_config.borderless = getInt(L"Window", L"Borderless", 1) != 0;
         g_config.resolutionW = getInt(L"Window", L"ResolutionW", 0);
         g_config.resolutionH = getInt(L"Window", L"ResolutionH", 0);
+        g_config.nativeRes = getInt(L"Graphics", L"NativeRes", 1) != 0;
 
         g_config.vsync = getInt(L"Graphics", L"VSync", 1) != 0;
         g_config.fpsCap = getInt(L"Graphics", L"FpsCap", 0);
@@ -76,7 +79,7 @@ namespace ssa
         g_config.anisotropy = getInt(L"Graphics", L"Anisotropy", 8);
         g_config.anisotropy = std::max(1, std::min(16, g_config.anisotropy));
 
-        int sharpness = getInt(L"Graphics", L"TextureSharpness", 15);
+        int sharpness = getInt(L"Graphics", L"TextureSharpness", 10);
         sharpness = std::max(0, std::min(20, sharpness));
         g_config.lodBias = -(sharpness * 0.1f);
 
@@ -100,23 +103,25 @@ namespace ssa
             L"; Skylanders Spyro's Adventure Improved - Mod Config\n"
             L"\n"
             L"[Window]\n"
-            L"; Run game in windowed mode (0 = fullscreen, 1 = windowed)\n"
+            L"; Run game in windowed mode (0 = fullscreen, 1 = windowed (default))\n"
             L"Windowed=1\n"
-            L"; Remove window border / titlebar (windowed mode needs to be active) (0 = disabled, 1 = enabled)\n"
+            L"; Remove window border / titlebar (windowed mode needs to be active) (0 = disabled, 1 = enabled (default))\n"
             L"Borderless=1\n"
-            L"; Custom resolution. Set both to 0 to use your desktop resolution.\n"
+            L"; Custom resolution (set both to 0 to use your desktop resolution)\n"
             L"ResolutionW=0\n"
             L"ResolutionH=0\n"
+            L"; Renders the game at the chosen / native resolution internally (0 = disabled, 1 = enabled (default))\n"
+            L"NativeRes=1\n"
             L"\n"
             L"[Graphics]\n"
-            L"; Vertical sync (0 = disabled, 1 = enabled)\n"
+            L"; Vertical sync (0 = disabled, 1 = enabled (default))\n"
             L"VSync=1\n"
             L"; Frame rate cap. Set to 0 for unlimited.\n"
             L"FpsCap=0\n"
             L"; Anisotropic filtering level (1 = off, valid: 1/2/4/8/16)\n"
             L"Anisotropy=8\n"
-            L"; Texture sharpness (0 = off, 15 = default, 20 = maximum)\n"
-            L"TextureSharpness=15\n"
+            L"; Texture sharpness (0 = off, 10 = default, 20 = maximum)\n"
+            L"TextureSharpness=10\n"
             L"\n"
             L"[Mod]\n"
             L"; Log level (0 = OFF, 1 = INFO, 2 = DEBUG, 3 = VERBOSE) - leave unchanged unless you need to debug an issue\n"
