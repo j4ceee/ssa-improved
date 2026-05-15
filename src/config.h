@@ -22,7 +22,7 @@ namespace ssa
         int anisotropy = 8; // 1, 2, 4, 8, 16
         float lodBias = -1.0f; // texture sharpness: -1.5 = default, 0 = off, -2 = max
 
-        bool nativeRes = true; // should game render at chosen / native resolution internally?
+        bool renderRes = true; // should game render at chosen / native resolution internally?
     };
 
     inline Config g_config;
@@ -37,7 +37,7 @@ namespace ssa
         return (pos != std::wstring::npos ? ws.substr(0, pos + 1) : L"") + L"ssa_impr_mod.ini";
     }
 
-    inline void CommunicateLogLevel()
+    inline void LogSettings()
     {
         const char* level = nullptr;
         switch (g_config.logLevel) {
@@ -55,7 +55,19 @@ namespace ssa
             break;
         }
 
-        Log("[Log] Log level set to %s (%d)", level, g_config.logLevel);
+        Log("[Log] Log level: %s (%d)", level, g_config.logLevel);
+
+        // log all settings:
+        Log("[Config] Windowed: %d", g_config.windowed);
+        Log("[Config] Borderless: %d", g_config.borderless);
+        Log("[Config] ResolutionW: %d", g_config.resolutionW);
+        Log("[Config] ResolutionH: %d", g_config.resolutionH);
+        Log("[Config] RenderRes: %d", g_config.renderRes);
+        Log("[Config] VSync: %d", g_config.vsync);
+        Log("[Config] FpsCap: %d", g_config.fpsCap);
+        Log("[Config] Supersampling multiplier: %.1f", g_config.ssMultiplier);
+        Log("[Config] Anisotropy: %d", g_config.anisotropy);
+        Log("[Config] Texture sharpness (LOD bias): %.1f", g_config.lodBias);
     }
 
     inline void LoadConfig()
@@ -80,10 +92,10 @@ namespace ssa
         g_config.borderless = getInt(L"Window", L"Borderless", 1) != 0;
         g_config.resolutionW = getInt(L"Window", L"ResolutionW", 0);
         g_config.resolutionH = getInt(L"Window", L"ResolutionH", 0);
-        g_config.nativeRes = getInt(L"Graphics", L"NativeRes", 1) != 0;
 
         g_config.vsync = getInt(L"Graphics", L"VSync", 1) != 0;
         g_config.fpsCap = getInt(L"Graphics", L"FpsCap", 0);
+        g_config.renderRes = getInt(L"Graphics", L"RenderRes", 1) != 0;
 
         g_config.ssMultiplier = std::max(1.0f, std::min(4.0f, getFloat(L"Graphics", L"Supersampling", 1.0f)));
 
@@ -98,7 +110,7 @@ namespace ssa
         g_config.logLevel = static_cast<LogLevel>(std::max(0, std::min(3, logLevelValue)));
 
         Log("Config loaded from %ls", f);
-        CommunicateLogLevel();
+        LogSettings();
     }
 
     inline bool WriteDefaultConfig()
@@ -116,21 +128,21 @@ namespace ssa
             L"[Window]\n"
             L"; Run game in windowed mode (0 = fullscreen, 1 = windowed (default))\n"
             L"Windowed=1\n"
-            L"; Remove window border / titlebar (windowed mode needs to be active) (0 = disabled, 1 = enabled (default))\n"
+            L"; Remove window border / titlebar (requires Windowed=1) (0 = disabled, 1 = enabled (default))\n"
             L"Borderless=1\n"
             L"; Custom resolution (set both to 0 to use your desktop resolution)\n"
             L"ResolutionW=0\n"
             L"ResolutionH=0\n"
-            L"; Renders the game at the chosen / native resolution internally (0 = disabled, 1 = enabled (default))\n"
-            L"NativeRes=1\n"
             L"\n"
             L"[Graphics]\n"
             L"; Vertical sync (0 = disabled, 1 = enabled (default))\n"
             L"VSync=1\n"
             L"; Frame rate cap. Set to 0 for unlimited.\n"
             L"FpsCap=0\n"
-            L"; Supersampling multiplier (1.0 = off (default), 1.5 = 1.5x SSAA, 2.0 = 2x SSAA)\n"
-            L"; This renders the game at a higher resolution internally and scales it down to your desktop or chosen resolution.\n"
+            L"; Allows the game to render at higher resolutions internally (0 = disabled, 1 = enabled (default))\n"
+            L"RenderRes=1\n"
+            L"; Supersampling multiplier (requires RenderRes=1) (1.0 = off (default), 1.5 = 1.5x SSAA, 2.0 = 2x SSAA)\n"
+            L"; Multiplies the internal render resolution for improved image quality and scales the image down to your chosen / desktop resolution.\n"
             L"Supersampling=1.0\n"
             L"; Anisotropic filtering level (1 = off, valid: 1/2/4/8/16)\n"
             L"Anisotropy=8\n"
@@ -143,7 +155,7 @@ namespace ssa
         );
         fclose(f);
         Log("Wrote default config to %ls", ini.c_str());
-        CommunicateLogLevel();
+        LogSettings();
         return true;
     }
 } // namespace ssa

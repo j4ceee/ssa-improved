@@ -160,7 +160,7 @@ namespace ssa::D3D9Hooks
     inline HRESULT WINAPI hook_SetPixelShaderConstantF(
         IDirect3DDevice9* pDevice, UINT StartRegister, const float* pData, UINT Vector4fCount)
     {
-        if (g_config.nativeRes && g_bbWidth > 0 && g_bbHeight > 0) {
+        if (g_config.renderRes && g_bbWidth > 0 && g_bbHeight > 0) {
             // stack-allocate for small batches (typical), heap for large ones
             float  stackBuf[32 * 4];
             float* patched = (Vector4fCount <= 32)
@@ -190,7 +190,7 @@ namespace ssa::D3D9Hooks
         DWORD Usage, D3DFORMAT Format, D3DPOOL Pool,
         IDirect3DTexture9** ppTexture, HANDLE* pSharedHandle)
     {
-        if ((Usage & D3DUSAGE_RENDERTARGET) && g_config.nativeRes && g_bbWidth > 0 && g_bbHeight > 0)
+        if ((Usage & D3DUSAGE_RENDERTARGET) && g_config.renderRes && g_bbWidth > 0 && g_bbHeight > 0)
             TryScaleDimensions(Width, Height);
 
         return orig_CreateTexture(pDevice, Width, Height, Levels, Usage, Format, Pool, ppTexture, pSharedHandle);
@@ -204,7 +204,7 @@ namespace ssa::D3D9Hooks
         D3DFORMAT Format, D3DMULTISAMPLE_TYPE MultiSample, DWORD MultisampleQuality,
         BOOL Discard, IDirect3DSurface9** ppSurface, HANDLE* pSharedHandle)
     {
-        if (g_config.nativeRes && g_bbWidth > 0 && g_bbHeight > 0)
+        if (g_config.renderRes && g_bbWidth > 0 && g_bbHeight > 0)
             TryScaleDimensions(Width, Height);
 
         return orig_CreateDepthStencilSurface(pDevice, Width, Height, Format,
@@ -216,7 +216,7 @@ namespace ssa::D3D9Hooks
     // -------------------------------------------------------------------------
     inline HRESULT WINAPI hook_SetViewport(IDirect3DDevice9* pDevice, const D3DVIEWPORT9* pViewport)
     {
-        if (pViewport && g_config.nativeRes && g_bbWidth > 0 && g_bbHeight > 0) {
+        if (pViewport && g_config.renderRes && g_bbWidth > 0 && g_bbHeight > 0) {
             UINT w = pViewport->Width, h = pViewport->Height;
             if (TryScaleDimensions(w, h)) {
                 D3DVIEWPORT9 vp = *pViewport;
@@ -233,7 +233,7 @@ namespace ssa::D3D9Hooks
     // -------------------------------------------------------------------------
     inline HRESULT WINAPI hook_SetScissorRect(IDirect3DDevice9* pDevice, const RECT* pRect)
     {
-        if (pRect && g_config.nativeRes && g_bbWidth > 0 && g_bbHeight > 0) {
+        if (pRect && g_config.renderRes && g_bbWidth > 0 && g_bbHeight > 0) {
             UINT w = (UINT)(pRect->right  - pRect->left);
             UINT h = (UINT)(pRect->bottom - pRect->top);
             if (TryScaleDimensions(w, h)) {

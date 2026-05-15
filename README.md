@@ -22,6 +22,7 @@
 - Custom resolution support
 - VSync toggle
 - FPS cap
+- Supersampling (up to 2x) (renders the game at a higher resolution and then downscales it to the display resolution)
 - Anisotropic filtering (up to 16x)
 
 ## Configuration
@@ -29,14 +30,18 @@
 - open this file with a text editor to configure the mod settings
 
 ### Available settings
-- `Windowed`: set to `1` to launch the game in windowed mode, or `0` for fullscreen (default: `1`)
-- `Borderless`: set to `1` to launch the game in borderless windowed mode, or `0` for normal windowed mode (`Windowed` needs to be set to `1`) (default: `1`)
-- `ResolutionW`: set the horizontal resolution of the game, set to `0` to use the desktop resolution (default: `0`)
-- `ResolutionH`: set the vertical resolution of the game, set to `0` to use the desktop resolution (default: `0`)
-- `VSync`: set to `1` to enable VSync, or `0` to disable it (default: `1`)
-- `FpsCap`: set the maximum FPS the game can run at, set to `0` for unlimited FPS (default: `0`)
-- `Anisotropy`: set the level of anisotropic filtering (default: `8` | valid values: `1` (off), `2`, `4`, `8`, `16`)
-- `TextureSharpness`: set the sharpness of textures (default: `15` | valid values: `0` (off) to `20` (max))
+| Setting            | Default | Description                                                                                                                                                                                                                                                                                             |
+|--------------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Windowed`         | `1`     | set to `1` to launch the game in windowed mode, or `0` for fullscreen                                                                                                                                                                                                                                   |
+| `Borderless`       | `1`     | set to `1` to launch the game in borderless windowed mode, or `0` for normal windowed mode (requires `Windowed=1`)                                                                                                                                                                                      |
+| `ResolutionW`      | `0`     | set the horizontal resolution of the game, set to `0` to use the desktop resolution                                                                                                                                                                                                                     |
+| `ResolutionH`      | `0`     | set the vertical resolution of the game, set to `0` to use the desktop resolution                                                                                                                                                                                                                       |
+| `VSync`            | `1`     | set to `1` to enable VSync, or `0` to disable it                                                                                                                                                                                                                                                        |
+| `FpsCap`           | `0`     | set the maximum FPS the game can run at, set to `0` for unlimited FPS                                                                                                                                                                                                                                   |
+| `RenderRes`        | `1`     | allows the game to render at higher resolutions internally (set to `0` to disable)                                                                                                                                                                                                                      |
+| `Supersampling`    | `1.0`   | Multiplies the internal render resolution for improved image quality and scales the image down to your chosen / desktop resolution (requires `RenderRes=1`)<br>E.g. at `1920x1080` desktop resolution, `Supersampling=2.0` renders at `3840x2160`, meanwhile `Supersampling=1.0` renders at `1920x1080` |
+| `Anisotropy`       | `8`     | set the level of anisotropic filtering (valid values: `1` (off), `2`, `4`, `8`, `16`)                                                                                                                                                                                                                   |
+| `TextureSharpness` | `10`    | set the sharpness of textures (valid values: `0` (off) to `20` (max))                                                                                                                                                                                                                                   |
 
 ## Installation
 
