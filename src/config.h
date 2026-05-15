@@ -18,6 +18,7 @@ namespace ssa
         // Graphics
         bool vsync = true; // enable vertical sync
         int fpsCap = 0; // 0 = unlimited
+        float ssMultiplier = 1.0f; // supersampling: 1.0 = off, 1.5 = 1.5x, 2.0 = 2x SSAA
         int anisotropy = 8; // 1, 2, 4, 8, 16
         float lodBias = -1.0f; // texture sharpness: -1.5 = default, 0 = off, -2 = max
 
@@ -67,6 +68,14 @@ namespace ssa
             return (int)GetPrivateProfileIntW(sec, key, def, f);
         };
 
+        auto getFloat = [&](const wchar_t* sec, const wchar_t* key, float def) -> float
+        {
+            wchar_t buf[32] = {};
+            GetPrivateProfileStringW(sec, key, nullptr, buf, 32, f);
+            if (buf[0] == L'\0') return def;
+            return wcstof(buf, nullptr);
+        };
+
         g_config.windowed = getInt(L"Window", L"Windowed", 1) != 0;
         g_config.borderless = getInt(L"Window", L"Borderless", 1) != 0;
         g_config.resolutionW = getInt(L"Window", L"ResolutionW", 0);
@@ -75,6 +84,8 @@ namespace ssa
 
         g_config.vsync = getInt(L"Graphics", L"VSync", 1) != 0;
         g_config.fpsCap = getInt(L"Graphics", L"FpsCap", 0);
+
+        g_config.ssMultiplier = std::max(1.0f, std::min(4.0f, getFloat(L"Graphics", L"Supersampling", 1.0f)));
 
         g_config.anisotropy = getInt(L"Graphics", L"Anisotropy", 8);
         g_config.anisotropy = std::max(1, std::min(16, g_config.anisotropy));
@@ -118,6 +129,9 @@ namespace ssa
             L"VSync=1\n"
             L"; Frame rate cap. Set to 0 for unlimited.\n"
             L"FpsCap=0\n"
+            L"; Supersampling multiplier (1.0 = off (default), 1.5 = 1.5x SSAA, 2.0 = 2x SSAA)\n"
+            L"; This renders the game at a higher resolution internally and scales it down to your desktop or chosen resolution.\n"
+            L"Supersampling=1.0\n"
             L"; Anisotropic filtering level (1 = off, valid: 1/2/4/8/16)\n"
             L"Anisotropy=8\n"
             L"; Texture sharpness (0 = off, 10 = default, 20 = maximum)\n"

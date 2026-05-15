@@ -53,15 +53,19 @@ namespace ssa::D3D9Hooks
     // dimension scaling table
     // maps known internal RT/viewport sizes to their scaled equivalents
     // -------------------------------------------------------------------------
+
+    inline UINT SsW() { return (UINT)roundf(g_bbWidth  * g_config.ssMultiplier); }
+    inline UINT SsH() { return (UINT)roundf(g_bbHeight * g_config.ssMultiplier); }
+
     inline bool TryScaleDimensions(UINT& w, UINT& h)
     {
         struct Entry { UINT sw, sh, dw, dh; };
         const Entry table[] = {
-            { k_internalW,      k_internalH,        g_bbWidth,      g_bbHeight     },  // main scene RT
-            { k_internalW / 2,  k_internalH / 2,    g_bbWidth / 2,  g_bbHeight / 2 },  // bloom 1 (?)
-            { k_internalW / 4,  k_internalH / 4,    g_bbWidth / 4,  g_bbHeight / 4 },  // bloom 2 (?)
-            { 288,              176,                g_bbWidth / 4,  g_bbHeight / 4 },  // SSAO / screen-space effect
-            { 144,              96,                 g_bbWidth / 8,  g_bbHeight / 8 },  // ?
+            { k_internalW,      k_internalH,        SsW(),      SsH()     },  // main scene RT
+            { k_internalW / 2,  k_internalH / 2,    SsW() / 2,  SsH() / 2 },  // bloom 1 (?)
+            { k_internalW / 4,  k_internalH / 4,    SsW() / 4,  SsH() / 4 },  // bloom 2 (?)
+            { 288,              176,                SsW() / 4,  SsH() / 4 },  // SSAO / screen-space effect
+            { 144,              96,                 SsW() / 8,  SsH() / 8 },  // ?
         };
         for (const auto& e : table) {
             if (w == e.sw && h == e.sh) {
@@ -113,16 +117,16 @@ namespace ssa::D3D9Hooks
     // patch a vec4 of texel-size shader constants from the internal resolution to the actual backbuffer resolution
     // game uses two patterns: (2/W, 2/H, 1/W, 1/H) & (1/W, 1/H, 0.5/W, 0.5/H)
     // -------------------------------------------------------------------------
-    inline bool FixTexelSizeVec4(float* v, UINT bbW, UINT bbH)
+    inline bool FixTexelSizeVec4(float* v)
     {
         // all internal resolution tiers and their scaled equivalents
         struct Tier { UINT iW, iH, oW, oH; };
         const Tier tiers[] = {
-            { k_internalW,      k_internalH,        bbW,    bbH     },
-            { k_internalW / 2,  k_internalH / 2,    bbW / 2,bbH / 2 },
-            { k_internalW / 4,  k_internalH / 4,    bbW / 4,bbH / 4 },
-            { 288,              176,                bbW / 4,bbH / 4 },
-            { 144,              96,                 bbW / 8,bbH / 8 },
+            { k_internalW,      k_internalH,        SsW(),    SsH()     },
+            { k_internalW / 2,  k_internalH / 2,    SsW() / 2,SsH() / 2 },
+            { k_internalW / 4,  k_internalH / 4,    SsW() / 4,SsH() / 4 },
+            { 288,              176,                SsW() / 4,SsH() / 4 },
+            { 144,              96,                 SsW() / 8,SsH() / 8 },
         };
 
         const float eps = 0.01f;
@@ -167,7 +171,7 @@ namespace ssa::D3D9Hooks
 
             bool any = false;
             for (UINT i = 0; i < Vector4fCount; i++)
-                if (FixTexelSizeVec4(patched + i * 4, g_bbWidth, g_bbHeight)) any = true;
+                if (FixTexelSizeVec4(patched + i * 4)) any = true;
 
             HRESULT hr = orig_SetPixelShaderConstantF(pDevice, StartRegister,
                 any ? patched : pData, Vector4fCount);
