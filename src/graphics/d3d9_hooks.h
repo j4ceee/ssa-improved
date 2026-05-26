@@ -54,6 +54,7 @@ namespace ssa::D3D9Hooks
     // maps known internal RT/viewport sizes to their scaled equivalents
     // -------------------------------------------------------------------------
 
+    inline UINT SsSq(UINT base) { return (UINT)roundf(base * g_config.ssMultiplier); }
     inline UINT SsW() { return (UINT)roundf(g_bbWidth  * g_config.ssMultiplier); }
     inline UINT SsH() { return (UINT)roundf(g_bbHeight * g_config.ssMultiplier); }
 
@@ -61,11 +62,13 @@ namespace ssa::D3D9Hooks
     {
         struct Entry { UINT sw, sh, dw, dh; };
         const Entry table[] = {
-            { k_internalW,      k_internalH,        SsW(),      SsH()     },  // main scene RT
-            { k_internalW / 2,  k_internalH / 2,    SsW() / 2,  SsH() / 2 },  // bloom 1 (?)
-            { k_internalW / 4,  k_internalH / 4,    SsW() / 4,  SsH() / 4 },  // bloom 2 (?)
-            { 288,              176,                SsW() / 4,  SsH() / 4 },  // SSAO / screen-space effect
-            { 144,              96,                 SsW() / 8,  SsH() / 8 },  // ?
+            { k_internalW,      k_internalH,        SsW(),          SsH()           },  // main scene color RT
+            { k_internalW / 2,  k_internalH / 2,    SsW() / 2,      SsH() / 2       },  // half-res post-fx
+            { k_internalW / 4,  k_internalH / 4,    SsW() / 4,      SsH() / 4       },  // quarter-res downsample + SSAO
+            { 288,              176,                SsW() / 4,      SsH() / 4       },  // bloom quarter ping-pong
+            { 144,              96,                 SsW() / 8,      SsH() / 8       },  // bloom eighth blur chain
+            { 512,              512,                SsSq(512), SsSq(512)  },  // mirror color RT
+            { 256,              256,                SsSq(256), SsSq(256)  },  // mirror blur/VSM target
         };
         for (const auto& e : table) {
             if (w == e.sw && h == e.sh) {
@@ -122,11 +125,13 @@ namespace ssa::D3D9Hooks
         // all internal resolution tiers and their scaled equivalents
         struct Tier { UINT iW, iH, oW, oH; };
         const Tier tiers[] = {
-            { k_internalW,      k_internalH,        SsW(),    SsH()     },
-            { k_internalW / 2,  k_internalH / 2,    SsW() / 2,SsH() / 2 },
-            { k_internalW / 4,  k_internalH / 4,    SsW() / 4,SsH() / 4 },
-            { 288,              176,                SsW() / 4,SsH() / 4 },
-            { 144,              96,                 SsW() / 8,SsH() / 8 },
+            { k_internalW,      k_internalH,        SsW(),          SsH()           },  // main scene color RT
+            { k_internalW / 2,  k_internalH / 2,    SsW() / 2,      SsH() / 2       },  // half-res post-fx
+            { k_internalW / 4,  k_internalH / 4,    SsW() / 4,      SsH() / 4       },  // quarter-res downsample + SSAO
+            { 288,              176,                SsW() / 4,      SsH() / 4       },  // bloom quarter ping-pong
+            { 144,              96,                 SsW() / 8,      SsH() / 8       },  // bloom eighth blur chain
+            { 512,              512,                SsSq(512), SsSq(512)  },  // mirror color RT
+            { 256,              256,                SsSq(256), SsSq(256)  },  // mirror blur/VSM target
         };
 
         const float eps = 0.01f;
