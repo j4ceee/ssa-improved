@@ -5,9 +5,8 @@ PROXY="$SCRIPT_DIR/portal_proxy.py"
 # kill any leftover proxy from a previous session
 pkill -f portal_proxy.py 2>/dev/null
 
-# start the proxy in the background; stdout goes to logs/portal_proxy.log
-mkdir -p "$SCRIPT_DIR/logs"
-python3 "$PROXY" >> "$SCRIPT_DIR/logs/portal_proxy.log" 2>&1 &
+# start the proxy in the background
+python3 "$PROXY" > /dev/null 2>&1 &
 PROXY_PID=$!
 
 # wait a moment to claim the USB device before the game opens

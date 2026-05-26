@@ -3,6 +3,8 @@
 #include <d3d9.h>
 
 #include "config.h"
+#include "imgui_impl_dx9.h"
+#include "imgui_impl_win32.h"
 #include "log.h"
 #include "MinHook.h"
 #include "window_hooks.h"
@@ -41,9 +43,10 @@ namespace ssa::D3D9Hooks
     // -------------------------------------------------------------------------
     // state
     // -------------------------------------------------------------------------
-    inline int  g_displayRefreshHz  = 0;
-    inline UINT g_bbWidth           = 0;
-    inline UINT g_bbHeight          = 0;
+    inline int g_displayRefreshHz = 0;
+    inline UINT g_bbWidth = 0;
+    inline UINT g_bbHeight = 0;
+    inline IDirect3DDevice9* g_d3dDevice = nullptr;
 
     // internal resolution the game uses for its 3D scene pipeline
     static constexpr UINT k_internalW = 1120;
@@ -348,11 +351,47 @@ namespace ssa::D3D9Hooks
         return orig_Present(pDevice, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
     }
 
+    inline bool g_imgui_initialized = false;
+
     // -------------------------------------------------------------------------
-    // Hook: EndScene - (imgui possibly)
+    // Hook: EndScene - imgui
     // -------------------------------------------------------------------------
     inline HRESULT WINAPI hook_EndScene(IDirect3DDevice9* pDevice)
     {
+        g_d3dDevice = pDevice;
+
+        // 1. initialize imgui
+        if (!g_imgui_initialized) {
+            D3DDEVICE_CREATION_PARAMETERS params;
+            if (SUCCEEDED(pDevice->GetCreationParameters(&params)))
+            {
+                // initialize imgui
+                UI::Get()->Initialize();
+                ImGui_ImplWin32_Init(params.hFocusWindow);
+                ImGui_ImplDX9_Init(pDevice);
+
+                g_imgui_initialized = true;
+                Log("[D3D9] ImGui Context & Window safely initialized in EndScene");
+            }
+        }
+
+        if (g_imgui_initialized && ImGui::GetCurrentContext() != nullptr) {
+            // 2. start the ImGui frame
+            ImGui_ImplDX9_NewFrame();
+            ImGui_ImplWin32_NewFrame();
+
+            ImGui::NewFrame();
+
+            // 3. draw UI
+            UI::Get()->Render();
+
+            // 4. finalize and render ImGui to the screen
+            ImGui::Render();
+            ImGui::EndFrame();
+            ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+        }
+
+        // 5. call original EndScene
         return orig_EndScene(pDevice);
     }
 
@@ -362,7 +401,20 @@ namespace ssa::D3D9Hooks
     inline HRESULT WINAPI hook_Reset(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pp)
     {
         ApplyPresentParams(pp);
-        return orig_Reset(pDevice, pp);
+
+        // tell ImGui to invalidate its DirectX resources before the reset happens
+        if (g_imgui_initialized && ImGui::GetCurrentContext() != nullptr) {
+            ImGui_ImplDX9_InvalidateDeviceObjects();
+        }
+
+        HRESULT hr = orig_Reset(pDevice, pp);
+
+        // tell ImGui to rebuild its DirectX resources after the reset succeeds
+        if (SUCCEEDED(hr) && g_imgui_initialized && ImGui::GetCurrentContext() != nullptr) {
+            ImGui_ImplDX9_CreateDeviceObjects();
+        }
+
+        return hr;
     }
 
     // -------------------------------------------------------------------------
@@ -398,15 +450,15 @@ namespace ssa::D3D9Hooks
                 };
 
                 DeviceHook hooks[] = {
-                    {  16, (void*)&hook_Reset,                      (void**)&orig_Reset,                    "Reset"                    },
-                    {  17, (void*)&hook_Present,                    (void**)&orig_Present,                  "Present"                  },
-                    {  23, (void*)&hook_CreateTexture,              (void**)&orig_CreateTexture,            "CreateTexture"            },
-                    {  29, (void*)&hook_CreateDepthStencilSurface,  (void**)&orig_CreateDepthStencilSurface,"CreateDepthStencilSurface"},
-                    {  47, (void*)&hook_SetViewport,                (void**)&orig_SetViewport,              "SetViewport"              },
-                    {  69, (void*)&hook_SetSamplerState,            (void**)&orig_SetSamplerState,          "SetSamplerState"          },
-                    {  75, (void*)&hook_SetScissorRect,             (void**)&orig_SetScissorRect,           "SetScissorRect"           },
-                    { 109, (void*)&hook_SetPixelShaderConstantF,    (void**)&orig_SetPixelShaderConstantF,  "SetPixelShaderConstantF"  },
-                    // { 42, (void*)&hook_EndScene, (void**)&orig_EndScene, "EndScene" }, // TODO: add back when needed
+                    {   16, (void*)&hook_Reset,                     (void**)&orig_Reset,                    "Reset"                     },
+                    {   17, (void*)&hook_Present,                   (void**)&orig_Present,                  "Present"                   },
+                    {   23, (void*)&hook_CreateTexture,             (void**)&orig_CreateTexture,            "CreateTexture"             },
+                    {   29, (void*)&hook_CreateDepthStencilSurface, (void**)&orig_CreateDepthStencilSurface,"CreateDepthStencilSurface" },
+                    {   42, (void*)&hook_EndScene,                  (void**)&orig_EndScene,                 "EndScene"                  },
+                    {   47, (void*)&hook_SetViewport,               (void**)&orig_SetViewport,              "SetViewport"               },
+                    {   69, (void*)&hook_SetSamplerState,           (void**)&orig_SetSamplerState,          "SetSamplerState"           },
+                    {   75, (void*)&hook_SetScissorRect,            (void**)&orig_SetScissorRect,           "SetScissorRect"            },
+                    {   109,(void*)&hook_SetPixelShaderConstantF,   (void**)&orig_SetPixelShaderConstantF,  "SetPixelShaderConstantF"   },
                 };
 
                 bool allOk = true;

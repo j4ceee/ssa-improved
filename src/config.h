@@ -1,34 +1,44 @@
 #pragma once
-#include <codecvt>
 #include <Windows.h>
+#include <filesystem>
 #include <string>
+#include <imgui.h>
 #include "log.h"
 
 namespace ssa
 {
+    namespace fs = std::filesystem;
+
     struct Config
     {
         // Window
-        bool windowed   = true; // run in windowed mode
+        bool windowed = true; // run in windowed mode
         bool borderless = true; // borderless if in windowed mode
-        int resolutionW = 0;    // 0 = use desktop resolution
-        int resolutionH = 0;    // 0 = use desktop resolution
+        int resolutionW = 0; // 0 = use desktop resolution
+        int resolutionH = 0; // 0 = use desktop resolution
 
         // Graphics
-        bool vsync          = true; // enable vertical sync
-        int fpsCap          = 0;    // 0 = unlimited
-        bool renderRes      = true; // should game render at chosen / native resolution internally?
-        float ssMultiplier  = 1.0f; // supersampling: 1.0 = off, 1.5 = 1.5x, 2.0 = 2x SSAA
-        int anisotropy      = 8;    // 1, 2, 4, 8, 16
+        bool vsync = true; // enable vertical sync
+        int fpsCap = 0; // 0 = unlimited
+        bool renderRes = true; // should game render at chosen / native resolution internally?
+        float ssMultiplier = 1.0f; // supersampling: 1.0 = off, 1.5 = 1.5x, 2.0 = 2x SSAA
+        int anisotropy = 8; // 1, 2, 4, 8, 16
 
-        int textureSharpness= 10;   // 0 = off, 10 = default, 20 = max (maps to lodBias internally)
-        float lodBias       = -1.0f;// derived from textureSharpness, do not set directly
+        int textureSharpness = 10; // 0 = off, 10 = default, 20 = max (maps to lodBias internally)
+        float lodBias = -1.0f; // derived from textureSharpness, do not set directly
 
         // Performance
-        bool disableGrass   = false; // prevents grass patches from rendering
+        bool disableGrass = false; // prevents grass patches from rendering
+
+        // Game
+        bool emulatedPortal = false;
+        // if true, the physical portal is ignored and all portal interactions are emulated in software (see portal/backend/EmulatedBackend.h)
+        bool emulatedPortalStartup = false;
+        // value of emulated portal during startup (should be used everywhere where emulated portal needs to be checked)
 
         // Mod
-        LogLevel logLevel   = LogLevel::INFO; // log level (OFF, INFO, DEBUG, VERBOSE)
+        float uiFontScale = 1.0f;
+        LogLevel logLevel = LogLevel::INFO; // log level (OFF, INFO, DEBUG, VERBOSE)
     };
 
     inline Config g_config;
@@ -41,12 +51,13 @@ namespace ssa
     // -------------------------------------------------------------------------
     inline std::wstring GetConfigPath()
     {
-        wchar_t path[MAX_PATH] = {};
-        GetModuleFileNameW(nullptr, path, MAX_PATH);
-        // replace .exe with .ini
-        std::wstring ws(path);
-        auto pos = ws.rfind(L'\\');
-        return (pos != std::wstring::npos ? ws.substr(0, pos + 1) : L"") + L"ssa_impr_mod.ini";
+        wchar_t modulePath[MAX_PATH] = {};
+        GetModuleFileNameW(nullptr, modulePath, MAX_PATH);
+
+        fs::path configPath = fs::path(modulePath).parent_path() / "ssa-improved" / "ssa_impr_mod.ini";
+
+        fs::create_directories(configPath.parent_path());
+        return configPath.wstring();
     }
 
     // -------------------------------------------------------------------------
@@ -62,18 +73,20 @@ namespace ssa
             case LogLevel::OFF:     level = "OFF";      break;
         }
 
-        Log("[Log] Log level: %s (%d)", level, g_config.logLevel);
+        LogF("[Log] Log level: %s (%d)", level, g_config.logLevel);
         // log all settings:
-        Log("[Config] Windowed: %d", g_config.windowed);
-        Log("[Config] Borderless: %d", g_config.borderless);
-        Log("[Config] ResolutionW: %d", g_config.resolutionW);
-        Log("[Config] ResolutionH: %d", g_config.resolutionH);
-        Log("[Config] RenderRes: %d", g_config.renderRes);
-        Log("[Config] VSync: %d", g_config.vsync);
-        Log("[Config] FpsCap: %d", g_config.fpsCap);
-        Log("[Config] Supersampling multiplier: %.1f", g_config.ssMultiplier);
-        Log("[Config] Texture sharpness: %d (LOD bias: %.1f)", g_config.textureSharpness, g_config.lodBias);
-        Log("[Config] Disable grass: %d", g_config.disableGrass);
+        LogF("[Config] Windowed: %d", g_config.windowed);
+        LogF("[Config] Borderless: %d", g_config.borderless);
+        LogF("[Config] ResolutionW: %d", g_config.resolutionW);
+        LogF("[Config] ResolutionH: %d", g_config.resolutionH);
+        LogF("[Config] RenderRes: %d", g_config.renderRes);
+        LogF("[Config] VSync: %d", g_config.vsync);
+        LogF("[Config] FpsCap: %d", g_config.fpsCap);
+        LogF("[Config] Supersampling multiplier: %.1f", g_config.ssMultiplier);
+        LogF("[Config] Texture sharpness: %d (LOD bias: %.1f)", g_config.textureSharpness, g_config.lodBias);
+        LogF("[Config] Disable grass: %d", g_config.disableGrass);
+        LogF("[Config] Emulated portal: %d", g_config.emulatedPortal);
+        LogF("[Config] Font scale: %.1f", g_config.uiFontScale);
     }
 
     // -------------------------------------------------------------------------
@@ -125,26 +138,40 @@ namespace ssa
             L"; Disabling grass rendering brings major performance improvements in areas with high foliage density\n"
             L"DisableGrass=%d\n"
             L"\n"
+            L"[Game]\n"
+            L"; Use a fully emulated portal instead of a physical USB device (0 = disabled (default), 1 = enabled)\n"
+            L"; When enabled, all other portal backends are ignored. Manage figures via the Portal tab in the mod menu.\n"
+            L"EmulatedPortal=%d\n"
+            L"\n"
             L"[Mod]\n"
+            L"; Scale of the font of the in-game UI (1.0 = default size, 2.0 = double size, etc.)\n"
+            L"FontScale=%.1f\n"
             L"; Log level (0 = OFF, 1 = INFO, 2 = DEBUG, 3 = VERBOSE) - leave unchanged unless you need to debug an issue\n"
             L"LogLevel=%d\n",
 
             // Window
-            (int)g_config.windowed,
-            (int)g_config.borderless,
+            static_cast<int>(g_config.windowed),
+            static_cast<int>(g_config.borderless),
             g_config.resolutionW,
             g_config.resolutionH,
+
             // Graphics
-            (int)g_config.vsync,
+            static_cast<int>(g_config.vsync),
             g_config.fpsCap,
-            (int)g_config.renderRes,
+            static_cast<int>(g_config.renderRes),
             g_config.ssMultiplier,
             g_config.anisotropy,
             g_config.textureSharpness,
+
             // Performance
-            (int)g_config.disableGrass,
+            static_cast<int>(g_config.disableGrass),
+
+            // Game
+            static_cast<int>(g_config.emulatedPortal),
+
             // Mod
-            (int)g_config.logLevel
+            g_config.uiFontScale,
+            static_cast<int>(g_config.logLevel)
         );
 
         fclose(f);
@@ -187,8 +214,14 @@ namespace ssa
 
         g_config.ssMultiplier = std::max(1.0f, std::min(4.0f, getFloat(L"Graphics", L"Supersampling", 1.0f)));
 
-        g_config.anisotropy = getInt(L"Graphics", L"Anisotropy", 8);
-        g_config.anisotropy = std::max(1, std::min(16, g_config.anisotropy));
+        int anisotropy = getInt(L"Graphics", L"Anisotropy", 8);
+        // clamp to nearest valid level
+        if (anisotropy <= 1) anisotropy = 1;
+        else if (anisotropy <= 2) anisotropy = 2;
+        else if (anisotropy <= 4) anisotropy = 4;
+        else if (anisotropy <= 8) anisotropy = 8;
+        else anisotropy = 16;
+        g_config.anisotropy = anisotropy;
 
         int sharpness = getInt(L"Graphics", L"TextureSharpness", 10);
         sharpness = std::max(0, std::min(20, sharpness));
@@ -198,11 +231,18 @@ namespace ssa
         // Performance
         g_config.disableGrass = getInt(L"Performance", L"DisableGrass", 0) != 0;
 
+        // Game
+        g_config.emulatedPortal = getInt(L"Game", L"EmulatedPortal", 0) != 0;
+        g_config.emulatedPortalStartup = g_config.emulatedPortal; // cache initial value
+
         // Mod
-        int logLevelValue = getInt(L"Mod", L"LogLevel", 0);
+        float fontScale = getFloat(L"Mod", L"FontScale", 1.0f);
+        g_config.uiFontScale = std::max(0.5f, std::min(3.0f, fontScale));
+
+        int logLevelValue = getInt(L"Mod", L"LogLevel", static_cast<int>(LogLevel::INFO));
         g_config.logLevel = static_cast<LogLevel>(std::max(0, std::min(3, logLevelValue)));
 
-        Log("Config loaded from %ls", f);
+        LogF("Config loaded from %ls", f);
         LogSettings();
     }
 
@@ -218,7 +258,7 @@ namespace ssa
 
         if (!g_configWritable)
         {
-            Log("[Config] EnsureConfigDefaults: cannot write — runtime config saves disabled");
+            Log("[Config] EnsureConfigDefaults: cannot write - runtime config saves disabled");
             return false;
         }
 
@@ -273,4 +313,48 @@ namespace ssa
         g_config.disableGrass = value;
         SaveConfig();
     }
+
+    inline void EnableVSync(bool value)
+    {
+        g_config.vsync = value;
+        SaveConfig();
+    }
+
+    inline void SetWindowed(bool value)
+    {
+        g_config.windowed = value;
+        SaveConfig();
+    }
+
+    inline void SetBorderless(bool value)
+    {
+        g_config.borderless = value;
+        SaveConfig();
+    }
+
+    inline void SetResolutionW(int value)
+    {
+        g_config.resolutionW = std::max(0, value);
+        SaveConfig();
+    }
+
+    inline void SetResolutionH(int value)
+    {
+        g_config.resolutionH = std::max(0, value);
+        SaveConfig();
+    }
+
+    inline void SetEmulatedPortal(bool value)
+    {
+        g_config.emulatedPortal = value;
+        SaveConfig();
+    }
+
+    inline void SetFontScale(float value)
+    {
+        g_config.uiFontScale = std::max(0.5f, std::min(3.0f, value));
+        ImGui::GetIO().FontGlobalScale = g_config.uiFontScale;
+        SaveConfig();
+    }
+
 } // namespace ssa

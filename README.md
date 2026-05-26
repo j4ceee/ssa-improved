@@ -16,17 +16,27 @@
 > Disclaimer: For some features I relied heavily on AI, since I do not yet have the necessary knowledge to implement those myself.
 
 ## Features
+
+### General
+- In-game mod UI to easily change mod settings & operate the emulated portal (if enabled)
+  - press `F1` on your keyboard or `L3` + `R3` on a controller (both sticks pressed simultaneously) to open the mod UI
+- Emulated Portal of Power support (allows you to use Skylanders without a physical portal, for more info see [EMULATED_PORTAL.md](https://github.com/j4ceee/ssa-improved/blob/main/EMULATED_PORTAL.md)
 - Linux support for the Portal of Power
 - WinUSB support for the Portal of Power on Windows (the game can now use the same drivers as emulators like Cemu, RPCS3, ...)
+
+### Graphics
 - Windowed & borderless windowed mode on Windows
 - Custom resolution support
 - VSync toggle
 - FPS cap
 - Supersampling (up to 2x) (renders the game at a higher resolution and then downscales it to the display resolution)
 - Anisotropic filtering (up to 16x)
+- Texture sharpness control
+- Grass rendering toggle (disabling grass rendering brings major performance improvements in areas with high foliage density)
 
 ## Configuration
-- after launching the game with the mod installed for the first time, a `ssa_impr_mod.ini` file will be generated in the game directory
+- after launching the game with the mod installed for the first time, a folder called `ssa-improved` will be created in your game directory (where `Skylanders.exe` is located)
+- inside this folder you will find a `ssa_impr_mod.ini` file
 - open this file with a text editor to configure the mod settings
 
 ### Available settings
@@ -42,6 +52,9 @@
 | `Supersampling`    | `1.0`   | Multiplies the internal render resolution for improved image quality and scales the image down to your chosen / desktop resolution (requires `RenderRes=1`)<br>E.g. at `1920x1080` desktop resolution, `Supersampling=2.0` renders at `3840x2160`, meanwhile `Supersampling=1.0` renders at `1920x1080` |
 | `Anisotropy`       | `8`     | set the level of anisotropic filtering (valid values: `1` (off), `2`, `4`, `8`, `16`)                                                                                                                                                                                                                   |
 | `TextureSharpness` | `10`    | set the sharpness of textures (valid values: `0` (off) to `20` (max))                                                                                                                                                                                                                                   |
+| `DisableGrass`     | `0`     | Disabling grass rendering (value = `1`) brings major performance improvements in areas with high foliage density                                                                                                                                                                                        |
+| `EmulatedPortal`   | `0`     | Use a fully emulated portal instead of a physical USB device. When enabled (value = `1`) physical portals are ignored and Skylanders can be chosen over the in-game mod UI.                                                                                                                             |
+| `FontScale`        | `1.0`   | Scale of the font of the in-game UI (`1.0` = default size, `2.0` = double size, etc.)                                                                                                                                                                                                                   |
 
 ## Installation
 

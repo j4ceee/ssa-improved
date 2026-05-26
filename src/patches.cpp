@@ -2,12 +2,13 @@
 #include "log.h"
 #include "MinHook.h"
 #include "game/grassPatch.h"
+#include "game/inputSystem.h"
 #include "graphics/d3d9_hooks.h"
 #include "graphics/window_hooks.h"
-#include "libusb/portal_device.h"
-#include "libusb/hid.h"
-#include "libusb/kernel.h"
-#include "libusb/setupapi.h"
+#include "portal/portal_device.h"
+#include "portal/hid.h"
+#include "portal/kernel.h"
+#include "portal/setupapi.h"
 
 namespace ssa
 {
@@ -16,12 +17,12 @@ namespace ssa
     {
         Log("[Hooks] Starting InitStartupHooks");
 
-        // detect WinUSB driver presence and initialise libusb context
-        // this must happen before hooks are installed so SetupAPI injection knows whether to activate
-        if (!Portal::Init())
-            Log("[Hooks] Portal::Init failed - continuing without libusb support");
+        // Portal initialization moved to hook_SetupDiEnumDeviceInterfaces (libusb does not work properly in DllMain
+        // if (!Portal::Init())
+        //     Log("[Hooks] Portal::Init failed: No Portal available, make sure a portal is plugged in or the emulated portal is active!");
 
-        if (MH_Initialize() != MH_OK) {
+        if (MH_Initialize() != MH_OK)
+        {
             Log("[Hooks] Failed to initialize MinHook");
             return false;
         }
@@ -57,9 +58,8 @@ namespace ssa
             return false;
         }
 
-        Log("[Hooks] All hooks enabled - mode: %s",
-            Portal::g_winusb_mode ? "WinUSB (libusb injection active)"
-                                  : "HID driver (pass-through)");
+        Log("[Hooks] All hooks enabled");
+
         return true;
     }
 
@@ -73,6 +73,9 @@ namespace ssa
         {
             if (!Game::GrassPatch::HookGrassDrawAll())
                 Log("[Hooks] Failed to hook GrassDrawAll");
+
+            if (!Game::EngineInputHooks::InitInputHooks())
+                Log("[Hooks] Failed to hook Engine Input");
         }
         catch (const std::exception& e)
         {

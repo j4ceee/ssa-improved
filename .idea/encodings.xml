@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/src/imgui/fonts/fredoka_regular.cpp" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/imgui/fonts/skylanders_icons.cpp" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/imgui/fonts/ubuntu_title.cpp" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/imgui/fonts/varela_round_reg.cpp" charset="UTF-8" />
+  </component>
+</project>
