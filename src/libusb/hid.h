@@ -202,10 +202,10 @@ namespace ssa::HidHooks
             }
         };
 
-        hook("HidD_SetOutputReport",    &hook_HidD_SetOutputReport,    &orig_HidD_SetOutputReport,    true);
+        hook("HidD_SetOutputReport",    &hook_HidD_SetOutputReport,    &orig_HidD_SetOutputReport, true);
         hook("HidD_GetAttributes",      &hook_HidD_GetAttributes,      &orig_HidD_GetAttributes);
         hook("HidD_GetPreparsedData",   &hook_HidD_GetPreparsedData,   &orig_HidD_GetPreparsedData);
-        hook("HidD_FreePreparsedData",  &hook_HidD_FreePreparsedData,  &orig_HidD_FreePreparsedData); // must no-op sentinel
+        hook("HidD_FreePreparsedData",  &hook_HidD_FreePreparsedData,  &orig_HidD_FreePreparsedData);
         hook("HidD_SetNumInputBuffers", &hook_HidD_SetNumInputBuffers, &orig_HidD_SetNumInputBuffers);
         hook("HidP_GetCaps",            &hook_HidP_GetCaps,            &orig_HidP_GetCaps);
 

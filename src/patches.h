@@ -2,5 +2,7 @@
 
 namespace ssa
 {
-bool InitPatchesAndHooks();
+    bool InitStartupHooks();
+    void InitGameHooks();
+    inline bool g_gameHooksActive = false;
 }

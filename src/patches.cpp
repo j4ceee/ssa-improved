@@ -1,6 +1,7 @@
 ﻿#include "patches.h"
 #include "log.h"
 #include "MinHook.h"
+#include "game/grassPatch.h"
 #include "graphics/d3d9_hooks.h"
 #include "graphics/window_hooks.h"
 #include "libusb/portal_device.h"
@@ -10,23 +11,25 @@
 
 namespace ssa
 {
-
-    bool InitPatchesAndHooks()
+    // hook all low level functions
+    bool InitStartupHooks()
     {
-        Log("Starting InitPatchesAndHooks");
+        Log("[Hooks] Starting InitStartupHooks");
 
         // detect WinUSB driver presence and initialise libusb context
         // this must happen before hooks are installed so SetupAPI injection knows whether to activate
-        if (!Portal::Init()) {
-            Log("Portal::Init failed - continuing without libusb support");
-        }
+        if (!Portal::Init())
+            Log("[Hooks] Portal::Init failed - continuing without libusb support");
 
         if (MH_Initialize() != MH_OK) {
-            Log("Failed to initialize MinHook");
+            Log("[Hooks] Failed to initialize MinHook");
             return false;
         }
 
-        try {
+        try
+        {
+            // --- HOOKS START ---
+
             if (!KernelHooks::InitKernelHooks())
                 throw std::runtime_error("InitKernelHooks failed");
 
@@ -42,18 +45,41 @@ namespace ssa
             if (!D3D9Hooks::InitD3D9Hooks())
                 throw std::runtime_error("D3D9Hooks failed");
 
+            // --- HOOKS END ---
+
             if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK)
                 throw std::runtime_error("MH_EnableHook failed");
 
-        } catch (const std::exception& e) {
-            Log("Exception during patch init: %s", e.what());
+        }
+        catch (const std::exception& e)
+        {
+            Log("[Hooks] Exception during patch init: %s", e.what());
             return false;
         }
 
-        Log("All hooks enabled - mode: %s",
+        Log("[Hooks] All hooks enabled - mode: %s",
             Portal::g_winusb_mode ? "WinUSB (libusb injection active)"
                                   : "HID driver (pass-through)");
         return true;
+    }
+
+
+    // SecuROM does not like hooking game functions before startup, instead let's do it during the first rendered frame
+    void InitGameHooks()
+    {
+        Log("[Hooks] Starting InitGameHooks");
+
+        try
+        {
+            if (!Game::GrassPatch::HookGrassDrawAll())
+                Log("[Hooks] Failed to hook GrassDrawAll");
+        }
+        catch (const std::exception& e)
+        {
+            Log("[Hooks] Exception during patch init: %s", e.what());
+        }
+
+        g_gameHooksActive = true;
     }
 
 } // namespace ssa

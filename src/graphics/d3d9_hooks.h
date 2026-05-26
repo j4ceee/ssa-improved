@@ -1,12 +1,12 @@
 #pragma once
 #include <Windows.h>
 #include <d3d9.h>
-#include <cmath>
 
 #include "config.h"
 #include "log.h"
 #include "MinHook.h"
 #include "window_hooks.h"
+#include "patches.h"
 
 namespace ssa::D3D9Hooks
 {
@@ -340,6 +340,10 @@ namespace ssa::D3D9Hooks
                 }
             }
         }
+
+        // initialize game hooks on first rendered frame (to bypass SecuROM)
+        if (!g_gameHooksActive)
+            InitGameHooks();
 
         return orig_Present(pDevice, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
     }

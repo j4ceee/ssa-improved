@@ -1,5 +1,6 @@
 #include <Windows.h>
 
+#include "addresses.h"
 #include "xinput1_3.h"
 #include "log.h"
 #include "MinHook.h"
@@ -39,8 +40,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                 ssa::Log("Failed to load original XInput DLL");
             }
 
-            bool filesOk = ssa::WriteDefaultConfig();
-            ssa::LoadConfig();
+            ssa::LoadConfig(); // read file (or use defaults if absent)
+            bool filesOk = ssa::InitConfigFile(); // write / create file, set g_configWritable
 
             if (!filesOk) {
                 MessageBox(nullptr,
@@ -52,7 +53,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                     MB_OK | MB_ICONWARNING);
             }
 
-            if (!ssa::InitPatchesAndHooks()) {
+            ssa::InitAddresses();
+            if (!ssa::InitStartupHooks()) {
                 ssa::Log("Failed to initialize patches and hooks - exiting");
                 MessageBox(nullptr, "There was an error setting up the mod. This should not happen."
                     "\nMake sure you have the latest and unmodified version of the mod and the game.",
