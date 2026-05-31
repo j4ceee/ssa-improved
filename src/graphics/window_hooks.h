@@ -3,6 +3,10 @@
 #include "config.h"
 #include "log.h"
 #include "MinHook.h"
+#include "imgui/ui.h"
+#include "imgui.h"
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace ssa::WindowHooks
 {
@@ -60,7 +64,7 @@ namespace ssa::WindowHooks
             // game is setting a clip rect - save it but only apply if we have focus
             g_gameClipRect = *pRect;
             g_hasClipRect = true;
-            if (!g_hasFocus) {
+            if (!g_hasFocus || UI::Get()->IsVisible()) {
                 LogDebug("[Window] Deferred ClipCursor (no focus)");
                 return TRUE;
             }
@@ -73,8 +77,8 @@ namespace ssa::WindowHooks
 
     inline int WINAPI hook_ShowCursor(BOOL bShow)
     {
-        // if we don't have focus, always show the cursor regardless of what the game wants
-        if (g_config.windowed && !g_hasFocus && !bShow) {
+        // if we don't have focus or the ui is open, always show the cursor regardless of what the game wants
+        if (g_config.windowed && (!g_hasFocus || UI::Get()->IsVisible()) && !bShow) {
             LogDebug("[Window] Suppressed ShowCursor(FALSE) - no focus");
             return 0; // return a plausible cursor count without actually hiding
         }
@@ -97,15 +101,22 @@ namespace ssa::WindowHooks
                 case WM_ACTIVATE:
                     if (LOWORD(wParam) == WA_INACTIVE) {
                         g_hasFocus = false;
-                        orig_ClipCursor(nullptr); // release mouse to whole desktop
-                        orig_ShowCursor(TRUE); // ensure cursor is visible when alt-tabbed
+                        if (!UI::Get()->IsVisible()) // when UI is open the cursor is already released & visible
+                        {
+                            orig_ClipCursor(nullptr); // release mouse to whole desktop
+                            orig_ShowCursor(TRUE); // ensure cursor is visible when alt-tabbed
+                        }
                         Log("[Window] Suppressed WM_ACTIVATE(WA_INACTIVE), released ClipCursor");
                         return 0;
                     } else {
                         g_hasFocus = true;
-                        if (g_hasClipRect)
-                            orig_ClipCursor(&g_gameClipRect); // restore game's clip rect
-                        orig_ShowCursor(FALSE);
+                        if (!UI::Get()->IsVisible()) // when UI is open and focus is shifted into the game, don't hide mouse, we need it for the UI (UI will hide it)
+                        {
+                            // if imgui ui not visible restore game clipping
+                            if (g_hasClipRect)
+                                orig_ClipCursor(&g_gameClipRect);
+                            orig_ShowCursor(FALSE);
+                        }
                         LogDebug("[Window] WM_ACTIVATE focus gained, restored ClipCursor");
                     }
                     break;
@@ -138,6 +149,25 @@ namespace ssa::WindowHooks
                     break;
             }
         }
+
+        // SAFETY CHECK: don't do anything ImGui-related until the context exists
+        if (ImGui::GetCurrentContext() != nullptr)
+        {
+            if (uMsg == WM_KEYDOWN && wParam == VK_F1 && (lParam >> 30) == 0) {
+                UI::Get()->ToggleVisible();
+                return true;
+            }
+
+            if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam))
+                return true;
+
+            if (UI::Get()->IsVisible()) {
+                if (uMsg == WM_KEYDOWN && (lParam >> 30) == 0)
+                    if (UI::HandleHotkeyCapture(wParam)) return true;
+                return true;
+            }
+        }
+
         return CallWindowProcA(g_origWndProc, hWnd, uMsg, wParam, lParam);
     }
 

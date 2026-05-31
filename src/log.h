@@ -11,10 +11,12 @@ namespace ssa
     // standard log - always visible at INFO and above
     void Log(const char* format, ...);
 
+    // forced log - always visible
+    void LogF(const char* format, ...);
+
     // debug log - only visible when DEBUG
     void LogDebug(const char* format, ...);
 
     // verbose log - only visible when VERBOSE
     void LogVerbose(const char* format, ...);
-
 } // namespace ssa

@@ -36,6 +36,11 @@ set(LIBUSB_BUILD_SHARED_LIBS OFF)
 add_subdirectory(deps/libusb)
 
 #
+# imgui
+#
+add_subdirectory(deps/imgui-cmake)
+
+#
 # xinput1_3 proxy DLL (the shim)
 #
 add_library(xinput1_3 SHARED)
@@ -64,6 +69,7 @@ target_link_libraries(xinput1_3 PRIVATE
     hid         # for HidD_* function signatures
     setupapi    # for device enumeration if needed later
     usb-1.0
+    imgui
 )
 
 if(MSVC)

@@ -15,7 +15,7 @@ import ctypes, socket, threading, sys, os, time, datetime
 # File logger
 # ---------------------------------------------------------------------------
 
-_log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "portal_proxy.log")
+_log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ssa-improved", "logs", "portal_proxy.log")
 _log_lock = threading.Lock()
 
 def _ts():
@@ -27,6 +27,9 @@ def plog(msg):
     with _log_lock:
         with open(_log_path, "a") as f:
             f.write(line + "\n")
+
+# make sure the directory exists before opening it
+os.makedirs(os.path.dirname(_log_path), exist_ok=True)
 
 with open(_log_path, "w") as f:
     f.write(f"=== portal_proxy.py started {datetime.datetime.now()} ===\n")
@@ -131,7 +134,7 @@ def open_portal():
     plog("Looking for portal (VID=0x1430 PID=0x0150)...")
     handle = _lib.libusb_open_device_with_vid_pid(ctx, VID, PID)
     if not handle:
-        plog("Portal not found - is it plugged in?")
+        plog("No physical portal found.")
         _lib.libusb_exit(ctx)
         return None, None
     plog(f"Portal opened: {handle:#x}")
@@ -247,7 +250,10 @@ def main():
 
     ctx, handle = open_portal()
     if handle is None:
-        sys.exit(1)
+        plog("No physical portal found, exiting cleanly.")
+        plog("If you are using the emulated portal, this is expected.")
+        plog("If you intended to use a physical portal, check that it is plugged in.")
+        sys.exit(0) # clean exit, not an error
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
