@@ -13,6 +13,8 @@ namespace ssa
         g_Address[UPDATE_KEYBOARD] = 0x00946570;
 
         g_Address[GRASS_DRAW_ALL] = 0x00985c30;
+
+        g_Address[SHEEP] = 0x00a30330; // sheep
     }
 
     void* GetAddress(Address address)

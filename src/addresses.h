@@ -14,6 +14,9 @@ namespace ssa
         // grass drawing
         GRASS_DRAW_ALL,
 
+        // sheep
+        SHEEP, // sheep
+
         COUNT,
     };
 

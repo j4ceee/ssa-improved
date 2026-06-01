@@ -3,6 +3,7 @@
 #include "MinHook.h"
 #include "game/grassPatch.h"
 #include "game/inputSystem.h"
+#include "game/sheepReaction.h"
 #include "graphics/d3d9_hooks.h"
 #include "graphics/window_hooks.h"
 #include "portal/portal_device.h"
@@ -71,11 +72,14 @@ namespace ssa
 
         try
         {
+            if (!Game::EngineInputHooks::InitInputHooks())
+                Log("[Hooks] Failed to hook Engine Input");
+
             if (!Game::GrassPatch::HookGrassDrawAll())
                 Log("[Hooks] Failed to hook GrassDrawAll");
 
-            if (!Game::EngineInputHooks::InitInputHooks())
-                Log("[Hooks] Failed to hook Engine Input");
+            if (!Game::SheepReaction::HookSheep())
+                Log("[Sheep] Failed to Sheep");
         }
         catch (const std::exception& e)
         {
