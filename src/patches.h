@@ -3,6 +3,6 @@
 namespace ssa
 {
     bool InitStartupHooks();
-    void InitGameHooks();
-    inline bool g_gameHooksActive = false;
+    void InitDeferredHooks();
+    inline bool g_deferredHooksActive = false;
 }

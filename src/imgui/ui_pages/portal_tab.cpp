@@ -4,7 +4,7 @@
 #include "config.h"
 #include "skylanders/SkylanderManager.h"
 #include "portal/portal_device.h"
-#include "graphics/d3d9_hooks.h"
+#include "window/d3d9_hooks.h"
 
 #include "imgui/fonts/IconsSkylanders.h"
 #include "portal/backend/EmulatedBackend.h"

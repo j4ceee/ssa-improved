@@ -9,6 +9,7 @@
 #include "MinHook.h"
 #include "window_hooks.h"
 #include "patches.h"
+#include "game/grassPatch.h"
 
 namespace ssa::D3D9Hooks
 {
@@ -291,7 +292,7 @@ namespace ssa::D3D9Hooks
     }
 
     // -------------------------------------------------------------------------
-    // Hook: Present - FPS limiter + deferred window setup
+    // Hook: Present - FPS limiter, window setup, init deferred hooks + execute game hooks
     // -------------------------------------------------------------------------
     inline HRESULT WINAPI hook_Present(IDirect3DDevice9* pDevice, const RECT* pSourceRect, const RECT* pDestRect,
         HWND hDestWindowOverride, const RGNDATA* pDirtyRegion)
@@ -345,8 +346,11 @@ namespace ssa::D3D9Hooks
         }
 
         // initialize game hooks on first rendered frame (to bypass SecuROM)
-        if (!g_gameHooksActive)
-            InitGameHooks();
+        if (!g_deferredHooksActive)
+            InitDeferredHooks();
+
+        // game "hooks", SecuROM is like "nuh-uh" for actual hooks, so let's modify data instead >:)
+        Game::GrassPatch::ApplyGrassPatch();
 
         return orig_Present(pDevice, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
     }

@@ -20,6 +20,9 @@ namespace ssa::WindowHooks
     using ShowCursor_t              = int(WINAPI*)(BOOL);
     using SetWindowLongA_t          = LONG(WINAPI*)(HWND, int, LONG);
     using SetWindowLongW_t          = LONG(WINAPI*)(HWND, int, LONG);
+    using GetKeyState_t             = SHORT(WINAPI*)(int);
+    using GetCursorPos_t            = BOOL(WINAPI*)(LPPOINT);
+    using SetCursorPos_t            = BOOL(WINAPI*)(int, int);
 
     inline CreateWindowExA_t        orig_CreateWindowExA        = nullptr;
     inline SetWindowPos_t           orig_SetWindowPos           = nullptr;
@@ -31,6 +34,9 @@ namespace ssa::WindowHooks
     inline ShowCursor_t             orig_ShowCursor             = nullptr;
     inline SetWindowLongA_t         orig_SetWindowLongA         = nullptr;
     inline SetWindowLongW_t         orig_SetWindowLongW         = nullptr;
+    inline GetKeyState_t            orig_GetKeyState            = nullptr;
+    inline GetCursorPos_t           orig_GetCursorPos           = nullptr;
+    inline SetCursorPos_t           orig_SetCursorPos           = nullptr;
 
     inline WNDPROC                  g_origWndProc               = nullptr;
     inline HHOOK                    g_hCBTHook                  = nullptr;
@@ -38,6 +44,7 @@ namespace ssa::WindowHooks
     inline bool g_hasFocus      = true;
     inline RECT g_gameClipRect  = {};
     inline bool g_hasClipRect   = false;
+    inline POINT g_frozenCursorPos = {};
 
     // the game's main window HWND (populated in TrySetupGameWindow)
     inline HWND g_hGameWindow = nullptr;
@@ -361,6 +368,41 @@ namespace ssa::WindowHooks
         return orig_SetWindowLongW(hWnd, nIndex, dwNewLong);
     }
 
+    // -------------------------------------------------------------------------
+    // Input Hooks
+    // -------------------------------------------------------------------------
+    inline SHORT WINAPI hook_GetKeyState(int nVirtKey)
+    {
+        if (UI::Get()->IsVisible())
+            return 0;
+        return orig_GetKeyState(nVirtKey);
+    }
+
+    inline BOOL WINAPI hook_GetCursorPos(LPPOINT lpPoint)
+    {
+        BOOL result = orig_GetCursorPos(lpPoint);
+        if (UI::Get()->IsVisible())
+        {
+            if (lpPoint) *lpPoint = g_frozenCursorPos;
+        }
+        else if (result && lpPoint)
+        {
+            g_frozenCursorPos = *lpPoint;
+        }
+        return result;
+    }
+
+    inline BOOL WINAPI hook_SetCursorPos(int X, int Y)
+    {
+        if (UI::Get()->IsVisible())
+            return TRUE;
+        return orig_SetCursorPos(X, Y);
+    }
+
+
+    // -------------------------------------------------------------------------
+    // Init
+    // -------------------------------------------------------------------------
     inline bool InitWindowHooks()
     {
         auto mh = [](const char* name, auto hook, auto* orig, const wchar_t* mod = L"user32.dll") {
@@ -380,6 +422,9 @@ namespace ssa::WindowHooks
         ok &= mh("ShowCursor",              &hook_ShowCursor,               &orig_ShowCursor);
         ok &= mh("SetWindowLongA",          &hook_SetWindowLongA,           &orig_SetWindowLongA);
         ok &= mh("SetWindowLongW",          &hook_SetWindowLongW,           &orig_SetWindowLongW);
+        ok &= mh("GetKeyState",             &hook_GetKeyState,              &orig_GetKeyState);
+        ok &= mh("GetCursorPos",            &hook_GetCursorPos,             &orig_GetCursorPos);
+        ok &= mh("SetCursorPos",            &hook_SetCursorPos,             &orig_SetCursorPos);
 
         if (ok) Log("[Window] Hooks installed");
         return ok;

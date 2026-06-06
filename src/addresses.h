@@ -4,6 +4,11 @@ namespace ssa
 {
     enum Address
     {
+        MOUSE_DEVICE,
+        GRASS_COUNT,
+
+
+        // DIRECT GAME HOOKS ARE IMPOSSIBLE DUE TO SECUROM ---------------------------------------
         // input
         UPDATE_CONTROLLER, // controller input
 

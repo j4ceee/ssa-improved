@@ -6,6 +6,11 @@ namespace ssa
 
     void InitAddresses()
     {
+        g_Address[MOUSE_DEVICE] = 0x00ca29e0; // DirectInput mouse device pointer
+        g_Address[GRASS_COUNT] = 0x00d9146c; // number of grass patches to draw (probably / maybe?)
+
+
+        // DIRECT GAME HOOKS ARE IMPOSSIBLE DUE TO SECUROM ---------------------------------------
         g_Address[UPDATE_CONTROLLER] = 0x009475f0;
 
         g_Address[POLL_M_KB] = 0x00945df0; // loops infinitely in the background, no MinHook detouring!!

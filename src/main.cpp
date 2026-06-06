@@ -5,7 +5,7 @@
 #include "log.h"
 #include "MinHook.h"
 #include "patches.h"
-#include "graphics/window_hooks.h"
+#include "window/window_hooks.h"
 #include "imgui/ui.h"
 #include "portal/portal_device.h"
 #include "skylanders/SkylanderManager.h"

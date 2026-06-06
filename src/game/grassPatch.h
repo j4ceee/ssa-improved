@@ -1,26 +1,12 @@
 #pragma once
+#include "addresses.h"
 #include "config.h"
-#include "hook_helpers.h"
 
 namespace ssa::Game::GrassPatch
 {
-    using GrassDrawAll_t = void(*)();
-    inline GrassDrawAll_t orig_GrassDrawAll = nullptr;
-
-    inline void hook_GrassDrawAll() {
-        if (g_config.disableGrass) {
-            // skip original function, effectively preventing grass from rendering
-            return;
-        }
-
-        orig_GrassDrawAll();
-    }
-
-    inline bool HookGrassDrawAll()
+    inline void ApplyGrassPatch()
     {
-        if (orig_GrassDrawAll != nullptr) {
-            return true; // already set up
-        }
-        return MH_CreateHookSSA(GRASS_DRAW_ALL, &hook_GrassDrawAll, &orig_GrassDrawAll);
+        if (g_config.disableGrass)
+            *static_cast<int*>(GetAddress(GRASS_COUNT)) = 0;
     }
 }

@@ -1,15 +1,14 @@
 ﻿#include "patches.h"
 #include "log.h"
 #include "MinHook.h"
-#include "game/grassPatch.h"
-#include "game/inputSystem.h"
-#include "game/sheepReaction.h"
-#include "graphics/d3d9_hooks.h"
-#include "graphics/window_hooks.h"
+#include "window/d3d9_hooks.h"
+#include "window/window_hooks.h"
 #include "portal/portal_device.h"
 #include "portal/hid.h"
 #include "portal/kernel.h"
 #include "portal/setupapi.h"
+#include "input/winmm_hooks.h"
+#include "input/dinput_hooks.h"
 
 namespace ssa
 {
@@ -47,6 +46,9 @@ namespace ssa
             if (!D3D9Hooks::InitD3D9Hooks())
                 throw std::runtime_error("D3D9Hooks failed");
 
+            // if (!WinmmHooks::InitWinmmHooks())
+            //     Log("[Hooks] WinmmHooks failed, controller input will not be blocked");
+
             // --- HOOKS END ---
 
             if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK)
@@ -66,27 +68,37 @@ namespace ssa
 
 
     // SecuROM does not like hooking game functions before startup, instead let's do it during the first rendered frame
-    void InitGameHooks()
+    void InitDeferredHooks()
     {
-        Log("[Hooks] Starting InitGameHooks");
+        static int attempts = 0;
+        Log("[Hooks] Starting InitGameHooks, attempt #%d", ++attempts);
+
+        static bool s_dinput_hooked = false;
+        static bool s_winmm_hooked = false;
 
         try
         {
-            if (!Game::EngineInputHooks::InitInputHooks())
-                Log("[Hooks] Failed to hook Engine Input");
+            if (!s_dinput_hooked)
+            {
+                s_dinput_hooked = DInputHooks::HookDInputMouseDevice();
+                if (!s_dinput_hooked)
+                    Log("[Hooks] Failed to hook DirectInput mouse device, mouse input may not be blocked when UI is open");
+            }
 
-            if (!Game::GrassPatch::HookGrassDrawAll())
-                Log("[Hooks] Failed to hook GrassDrawAll");
-
-            if (!Game::SheepReaction::HookSheep())
-                Log("[Sheep] Failed to Sheep");
+            if (!s_winmm_hooked)
+            {
+                s_winmm_hooked = WinmmHooks::InitWinmmHooks();
+                 if (!s_winmm_hooked)
+                     Log("[Hooks] Failed to hook winmm joyGetPosEx, controller input may not be blocked when UI is open");
+            }
         }
         catch (const std::exception& e)
         {
             Log("[Hooks] Exception during patch init: %s", e.what());
         }
 
-        g_gameHooksActive = true;
+        if (s_dinput_hooked && s_winmm_hooked)
+            g_deferredHooksActive = true;
     }
 
 } // namespace ssa

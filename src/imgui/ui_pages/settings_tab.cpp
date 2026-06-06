@@ -84,7 +84,8 @@ namespace ssa::UIPages
                 DisableGrass(grassDisabled);
             }
             ImGui::SameLine();
-            UI::HelpMarker("Prevents grass patches from rendering, which will bring major performance improvements in areas with high foliage density.");
+            UI::HelpMarker("Prevents grass patches from rendering, which will bring major performance improvements in areas with high foliage density.",
+                "Disabling this requires reloading the current level before grass becomes visible again.");
         }
 
         ImGui::Spacing();

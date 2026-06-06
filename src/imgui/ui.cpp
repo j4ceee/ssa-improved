@@ -9,7 +9,7 @@
 #include "imgui_impl_dx9.h"
 #include "imgui_impl_win32.h"
 #include "imgui_internal.h"
-#include "graphics/window_hooks.h"
+#include "window/window_hooks.h"
 
 namespace ssa
 {
