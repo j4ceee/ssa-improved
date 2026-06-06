@@ -62,7 +62,8 @@ namespace ssa::Portal::Backend
         struct SlotDisplay
         {
             bool occupied;
-            std::filesystem::path filePath; // empty if unoccupied
+            std::filesystem::path filePath; // empty if unoccupied & or temporary figures
+            std::string displayName; // non-empty for temporary figures
         };
 
         // -----------------------------------------------------------------------
@@ -77,7 +78,7 @@ namespace ssa::Portal::Backend
                 HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
                 return ntdll && GetProcAddress(ntdll, "wine_get_version") != nullptr;
             }();
-            return isWine;
+            return isWine; // on Wine persist, elsewhere don't
         }
 
         bool IsAvailable() override { return true; }
@@ -280,12 +281,49 @@ namespace ssa::Portal::Backend
 
             s.data = data;
             s.filePath = filePath;
+            s.displayName.clear(); // library-backed; UI resolves the label via the library
             s.lastId = serial;
             s.status = ST_ADDED;
             s.queuedStatus.push(ST_ADDED);
             s.queuedStatus.push(ST_PRESENT);
 
             Log("[Emulated] Slot %d loaded: %ls (serial=0x%08X)", slot, filePath.c_str(), serial);
+            return true;
+        }
+
+        /**
+         * Generate figure data in memory for a temporary figure (item, mini, adventure pack) and load it into a specific UI slot (0-3)
+         *
+         * No file is created or read. Writes from the game are buffered in-memory and discarded on removal.
+         */
+        bool LoadTemporaryFigure(int slot, uint16_t figureId, uint16_t variantId, const char* displayName)
+        {
+            if (slot < 0 || slot >= SLOT_COUNT) return false;
+
+            std::array<uint8_t, DATA_SIZE> data{};
+            Skylanders::SkylanderManager::GenerateFigureData(figureId, variantId, data.data());
+
+            const uint32_t serial = static_cast<uint32_t>(data[0])
+                | static_cast<uint32_t>(data[1]) << 8
+                | static_cast<uint32_t>(data[2]) << 16
+                | static_cast<uint32_t>(data[3]) << 24;
+
+            std::lock_guard lk(m_skyMutex);
+            auto& s = m_slots[slot];
+
+            // drain any pending status transitions from the previous figure
+            s.queuedStatus = std::queue<uint8_t>();
+
+            s.data = data;
+            s.filePath.clear(); // no backing file, WriteBlock will skip disk flush automatically
+            s.displayName = displayName ? displayName : "";
+            s.lastId = serial;
+            s.status = ST_ADDED;
+            s.queuedStatus.push(ST_ADDED);
+            s.queuedStatus.push(ST_PRESENT);
+
+            Log("[Emulated] Slot %d loaded ephemeral: %s (ID: %04X, Variant: %04X, serial=0x%08X)",
+                slot, displayName, figureId, variantId, serial);
             return true;
         }
 
@@ -307,6 +345,7 @@ namespace ssa::Portal::Backend
             s.queuedStatus.push(ST_REMOVING);
             s.queuedStatus.push(ST_ABSENT);
             s.filePath.clear();
+            s.displayName.clear();
 
             Log("[Emulated] Slot %d removed", slot);
             return true;
@@ -322,7 +361,7 @@ namespace ssa::Portal::Backend
                 return {false, {}};
             std::lock_guard lk(m_skyMutex);
             const auto& s = m_slots[slot];
-            return {(s.status & 1) != 0, s.filePath};
+            return {(s.status & 1) != 0, s.filePath, s.displayName};
         }
 
         /**
@@ -347,6 +386,7 @@ namespace ssa::Portal::Backend
         {
             std::array<uint8_t, DATA_SIZE> data{};
             std::filesystem::path filePath;
+            std::string displayName; // non-empty for temp figures, empty for library-backed
             uint32_t lastId = 0;
             uint8_t status = ST_ABSENT;
             std::queue<uint8_t> queuedStatus;
@@ -468,6 +508,7 @@ namespace ssa::Portal::Backend
             memcpy(s.data.data() + (block * 16), toWrite, 16);
 
             // persist to disk immediately (1 KB write, should be negligible)
+            // temp figures have an empty filePath, so this is a no-op for them
             if (!s.filePath.empty())
                 Skylanders::SkylanderManager::SaveFigureData(s.filePath, s.data.data());
         }

@@ -15,9 +15,6 @@ namespace ssa::Skylanders
         TECH = 5,
         UNDEAD = 6,
         WATER = 7,
-
-        SIDEKICK = 8,
-        ITEM = 9,
     };
 
     struct SkylanderInfo
@@ -253,5 +250,31 @@ namespace ssa::Skylanders
         {"Slam Bam", "slam_bam", Element::WATER, g_slamBam, 4},
         {"Wham Shell", "wham_shell", Element::WATER, g_whamShell, 2},
         {"Zap", "zap", Element::WATER, g_zap, 2},
+    };
+
+    constexpr SkylanderInfo g_skylanderMinisDb[] = {
+        {514, 0x0000, "Gill Runt", "mini"},
+        {505, 0x0000, "Terrabite", "mini"},
+        {519, 0x0000, "Trigger Snappy", "mini"},
+        {526, 0x0000, "Whisper Elf", "mini"},
+    };
+
+    constexpr SkylanderInfo g_skylanderItemsDb[] = {
+        {200, 0x0000, "Anvil Rain", "item"},
+        {203, 0x0000, "Ghost Pirate Swords", "item"},
+        {202, 0x0000, "Healing Elixir", "item"},
+        {201, 0x0000, "Hidden Treasure", "item"},
+        {205, 0x0000, "Sky Iron Shield", "item"},
+        {207, 0x0000, "Sparx the Dragonfly", "item"},
+        {204, 0x0000, "Time Twist Hourglass", "item"},
+        {206, 0x0000, "Winged Boots", "item"},
+    };
+
+    constexpr SkylanderInfo g_skylanderAdventureDb[] = {
+        {303, 0x0000, "Darklight Crypt", "adventure"},
+        {300, 0x0000, "Dragon’s Peak", "adventure"},
+        {301, 0x0000, "Empire of Ice", "adventure"},
+        {302, 0x0000, "Pirate Seas", "adventure"},
+        {304, 0x0000, "Volcanic Vault", "adventure"},
     };
 }

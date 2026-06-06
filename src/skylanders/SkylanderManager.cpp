@@ -43,7 +43,7 @@ namespace ssa::Skylanders
 
         if (!std::filesystem::exists(m_baseDirectory)) return;
 
-        // recursively scan the directory for .sky files
+        // recursively scan the directory for .sky / .bin / .dump / .dmp files
         for (const auto& entry : std::filesystem::recursive_directory_iterator(m_baseDirectory))
         {
             if (entry.is_regular_file())
@@ -78,7 +78,7 @@ namespace ssa::Skylanders
                         }
                         prefix += "-";
 
-                        // stem() gets the filename without the .sky extension
+                        // stem() gets the filename without the extension
                         std::string rawName = sky.filePath.stem().string();
 
                         // extract the nickname if the file matches our naming convention
@@ -104,6 +104,40 @@ namespace ssa::Skylanders
     // -------------------------------------------------------------------------
     // Creation & File I/O
     // -------------------------------------------------------------------------
+
+    void SkylanderManager::GenerateFigureData(uint16_t figureId, uint16_t variantId, uint8_t* outBuffer)
+    {
+        memset(outBuffer, 0, 1024);
+
+        // sector trailers (Access Control Bits)
+        uint32_t first_block = 0x690F0F0F;
+        uint32_t other_blocks = 0x69080F7F;
+        memcpy(&outBuffer[0x36], &first_block, sizeof(first_block));
+        for (size_t index = 1; index < 0x10; index++) {
+            memcpy(&outBuffer[(index * 0x40) + 0x36], &other_blocks, sizeof(other_blocks));
+        }
+
+        // random UID and BCC
+        std::random_device rd;
+        std::mt19937 mt(rd());
+        std::uniform_int_distribution<int> dist(0, 255);
+        outBuffer[0] = dist(mt);
+        outBuffer[1] = dist(mt);
+        outBuffer[2] = dist(mt);
+        outBuffer[3] = dist(mt);
+        outBuffer[4] = outBuffer[0] ^ outBuffer[1] ^ outBuffer[2] ^ outBuffer[3]; // BCC checksum
+        outBuffer[5] = 0x81;
+        outBuffer[6] = 0x01;
+        outBuffer[7] = 0x0F;
+
+        // figure and variant IDs
+        memcpy(&outBuffer[0x10], &figureId, sizeof(figureId));
+        memcpy(&outBuffer[0x1C], &variantId, sizeof(variantId));
+
+        // CRC16 over first 0x1E bytes
+        uint16_t crc = CalculateCRC16(0xFFFF, outBuffer, 0x1E);
+        memcpy(&outBuffer[0x1E], &crc, sizeof(crc));
+    }
 
     bool SkylanderManager::CreateNewFigure(uint16_t figureId, uint16_t variantId, const std::string& nickname)
     {
@@ -134,37 +168,9 @@ namespace ssa::Skylanders
             return false;
         }
 
-        // --- build the 1024 byte array ---
+        // generate figure data
         std::array<uint8_t, 1024> data{};
-
-        // write sector trailers (Access Control Bits)
-        uint32_t first_block = 0x690F0F0F;
-        uint32_t other_blocks = 0x69080F7F;
-        memcpy(&data[0x36], &first_block, sizeof(first_block));
-        for (size_t index = 1; index < 0x10; index++) {
-            memcpy(&data[(index * 0x40) + 0x36], &other_blocks, sizeof(other_blocks));
-        }
-
-        // generate random Block 0 (UID and BCC)
-        std::random_device rd;
-        std::mt19937 mt(rd());
-        std::uniform_int_distribution<int> dist(0, 255);
-        data[0] = dist(mt);
-        data[1] = dist(mt);
-        data[2] = dist(mt);
-        data[3] = dist(mt);
-        data[4] = data[0] ^ data[1] ^ data[2] ^ data[3]; // BCC checksum
-        data[5] = 0x81;
-        data[6] = 0x01;
-        data[7] = 0x0F;
-
-        // set IDs
-        memcpy(&data[0x10], &figureId, sizeof(figureId));
-        memcpy(&data[0x1C], &variantId, sizeof(variantId));
-
-        // calculate and write CRC16
-        uint16_t crc = CalculateCRC16(0xFFFF, data.data(), 0x1E);
-        memcpy(&data[0x1E], &crc, sizeof(crc));
+        GenerateFigureData(figureId, variantId, data.data());
 
         // save and refresh
         bool saved = SaveFigureData(targetFile, data.data());
@@ -229,6 +235,31 @@ namespace ssa::Skylanders
                 }
             }
         }
+
+        for (const auto& figure : g_skylanderMinisDb)
+        {
+            if (figure.figureId == figureId)
+            {
+                return &figure;
+            }
+        }
+
+        for (const auto& figure : g_skylanderItemsDb)
+        {
+            if (figure.figureId == figureId)
+            {
+                return &figure;
+            }
+        }
+
+        for (const auto& figure : g_skylanderAdventureDb)
+        {
+            if (figure.figureId == figureId)
+            {
+                return &figure;
+            }
+        }
+
         return nullptr;
     }
 
@@ -286,6 +317,12 @@ namespace ssa::Skylanders
                 return std::string(ICON_SKY_LIGHTCORE) + " " + fig.displayName;
             if (std::strcmp(fig.fileAppend, "ee") == 0)
                 return std::string(ICON_SKY_EONS_ELITE) + " " + fig.displayName;
+            if (std::strcmp(fig.fileAppend, "mini") == 0)
+                return std::string(ICON_SKY_MINIS) + " " + fig.displayName;
+            if (std::strcmp(fig.fileAppend, "item") == 0)
+                return std::string(ICON_SKY_VEHICLES) + " " + fig.displayName;
+            if (std::strcmp(fig.fileAppend, "adventure") == 0)
+                return std::string(ICON_SKY_NEW) + " " + fig.displayName;
         }
 
         return fig.displayName;

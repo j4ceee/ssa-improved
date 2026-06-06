@@ -31,6 +31,7 @@ namespace ssa::Skylanders
         void RefreshLibrary();
         const std::vector<LoadedSkylander>& GetLibrary() const { return m_library; }
 
+        static void GenerateFigureData(uint16_t figureId, uint16_t variantId, uint8_t* outBuffer);
         bool CreateNewFigure(uint16_t figureId, uint16_t variantId, const std::string& nickname);
 
         static bool ReadFigureData(const std::filesystem::path& path, uint8_t* outBuffer);

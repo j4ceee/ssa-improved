@@ -166,7 +166,7 @@ namespace ssa::UIPages
         ImVec4 tint;
         if (useGameColor)
         {
-            // no pulse on game color
+            // no pulse on game colour
             tint = ImVec4(br, bg, bb, 1.0f);
         }
         else
@@ -208,17 +208,6 @@ namespace ssa::UIPages
         UI::HelpMarker(
             "When enabled, the mod will ignore the physical portal and emulate all portal interactions in software.",
             "Restart your game for this setting to take effect");
-
-        if (!Portal::g_backend)
-        {
-            // no backend!
-            ImGui::Spacing();
-            UI::WarningText(
-                "\n\nNo portal backend available!\n\n"
-                "Restart your game and make sure you have a supported portal plugged in at game startup or enable the emulated portal!",
-                true);
-            return;
-        }
 
         auto* emu = Portal::GetEmulated();
 
@@ -288,213 +277,278 @@ namespace ssa::UIPages
             return;
         }
 
+        // EMULATED PORTAL ---------------------------------------------------------------------
 
         // activeChangeSlot: -1 = none, 0-3 = picking a figure for that slot
         static int activeChangeSlot = -1;
 
-        ImGui::SeparatorText("Active Skylanders");
-        ImGui::Spacing();
-
-        // first empty slot gets a Set button, occupied slots get Set+Clear.
-        // later empty slots show nothing, they unlock as figures are added
-        int firstEmptySlot = Portal::Backend::EmulatedBackend::SLOT_COUNT;
-        for (int i = 0; i < Portal::Backend::EmulatedBackend::SLOT_COUNT; i++)
         {
-            if (!emu->GetSlotDisplay(i).occupied)
-            {
-                firstEmptySlot = i;
-                break;
-            }
-        }
+            ImGui::SeparatorText("Active Skylanders");
+            ImGui::Spacing();
 
-        ImGui::Indent();
-        if (ImGui::BeginTable("SlotsTable", 4, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit))
-        {
-            ImGui::TableSetupColumn("Slot", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 4.0f);
-            ImGui::TableSetupColumn("Figure", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Set", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 5.0f);
-            ImGui::TableSetupColumn("Clear", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 4.5f);
-
+            // first empty slot gets a Set button, occupied slots get Set+Clear.
+            // later empty slots show nothing, they unlock as figures are added
+            int firstEmptySlot = Portal::Backend::EmulatedBackend::SLOT_COUNT;
             for (int i = 0; i < Portal::Backend::EmulatedBackend::SLOT_COUNT; i++)
             {
-                auto display = emu->GetSlotDisplay(i);
-                bool isPicking = (activeChangeSlot == i);
-                bool showSet = display.occupied || (i == firstEmptySlot) || isPicking;
-                bool showClear = display.occupied;
-
-                ImGui::TableNextRow();
-
-                // column 0 - slot label
-                ImGui::TableNextColumn();
-                ImGui::Text("Slot %d:", i + 1);
-
-                // column 1 - figure name (or empty indicator)
-                ImGui::TableNextColumn();
-                if (display.occupied && !display.filePath.empty())
+                if (!emu->GetSlotDisplay(i).occupied)
                 {
-                    // resolve name from the library so we show the friendly display name
-                    std::string label = display.filePath.stem().string();
-                    const auto& lib = Skylanders::SkylanderManager::Get().GetLibrary();
-                    for (const auto& entry : lib)
+                    firstEmptySlot = i;
+                    break;
+                }
+            }
+
+            ImGui::Indent();
+            if (ImGui::BeginTable("SlotsTable", 4, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit))
+            {
+                ImGui::TableSetupColumn("Slot", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 4.0f);
+                ImGui::TableSetupColumn("Figure", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Set", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 5.0f);
+                ImGui::TableSetupColumn("Clear", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 4.5f);
+
+                for (int i = 0; i < Portal::Backend::EmulatedBackend::SLOT_COUNT; i++)
+                {
+                    auto display = emu->GetSlotDisplay(i);
+                    bool isPicking = (activeChangeSlot == i);
+                    bool showSet = display.occupied || (i == firstEmptySlot) || isPicking;
+                    bool showClear = display.occupied;
+
+                    ImGui::TableNextRow();
+
+                    // column 0 - slot label
+                    ImGui::TableNextColumn();
+                    ImGui::Text("Slot %d:", i + 1);
+
+                    // column 1 - figure name (or empty indicator)
+                    ImGui::TableNextColumn();
+                    if (display.occupied)
                     {
-                        if (entry.filePath == display.filePath)
+                        if (!display.filePath.empty())
                         {
-                            label = entry.displayName;
-                            if (!entry.nickName.empty())
-                                label += " (\"" + entry.nickName + "\")";
-                            break;
+                            // resolve name from the library so we show the friendly display name
+                            std::string label = display.filePath.stem().string();
+                            const auto& lib = Skylanders::SkylanderManager::Get().GetLibrary();
+                            for (const auto& entry : lib)
+                            {
+                                if (entry.filePath == display.filePath)
+                                {
+                                    label = entry.displayName;
+                                    if (!entry.nickName.empty())
+                                        label += " (\"" + entry.nickName + "\")";
+                                    break;
+                                }
+                            }
+                            ImGui::TextUnformatted(label.c_str());
                         }
-                    }
-                    ImGui::TextUnformatted(label.c_str());
-                }
-                else
-                {
-                    ImGui::TextDisabled("--- Empty ---");
-                }
-
-                // column 2 - set / cancel button
-                ImGui::TableNextColumn();
-                if (showSet)
-                {
-                    if (isPicking)
-                    {
-                        if (ImGui::Button(("Cancel##s" + std::to_string(i)).c_str(), ImVec2(-1, 0)))
-                            activeChangeSlot = -1;
+                        else
+                        {
+                            // temporary (item / mini / adventure pack): name is pre-set at load time
+                            ImGui::TextUnformatted(display.displayName.c_str());
+                        }
                     }
                     else
                     {
-                        if (ImGui::Button(("Set##s" + std::to_string(i)).c_str(), ImVec2(-1, 0)))
-                            activeChangeSlot = i;
+                        ImGui::TextDisabled("--- Empty ---");
                     }
-                }
 
-                // column 3 - clear button (occupied slots only)
-                ImGui::TableNextColumn();
-                if (showClear)
-                {
-                    if (ImGui::Button(("Clear##s" + std::to_string(i)).c_str(), ImVec2(-1, 0)))
+                    // column 2 - set / cancel button
+                    ImGui::TableNextColumn();
+                    if (showSet)
                     {
-                        emu->RemoveSkylander(i);
-                        if (activeChangeSlot == i)
-                            activeChangeSlot = -1;
+                        if (isPicking)
+                        {
+                            if (ImGui::Button(("Cancel##s" + std::to_string(i)).c_str(), ImVec2(-1, 0)))
+                                activeChangeSlot = -1;
+                        }
+                        else
+                        {
+                            if (ImGui::Button(("Set##s" + std::to_string(i)).c_str(), ImVec2(-1, 0)))
+                                activeChangeSlot = i;
+                        }
+                    }
+
+                    // column 3 - clear button (occupied slots only)
+                    ImGui::TableNextColumn();
+                    if (showClear)
+                    {
+                        if (ImGui::Button(("Clear##s" + std::to_string(i)).c_str(), ImVec2(-1, 0)))
+                        {
+                            emu->RemoveSkylander(i);
+                            if (activeChangeSlot == i)
+                                activeChangeSlot = -1;
+                        }
                     }
                 }
+                ImGui::EndTable();
             }
-            ImGui::EndTable();
+            ImGui::Unindent();
         }
-        ImGui::Unindent();
 
         ImGui::Spacing();
         ImGui::Spacing();
 
         // --- 3. Library ---
-        ImGui::SeparatorText("Library");
-        ImGui::Spacing();
-
-        if (ImGui::Button(ICON_MD_ADD " Open Skylander Creator"))
-            UI::Get()->SetCreatorVisible(true);
-
-        ImGui::Spacing();
-
-        if (activeChangeSlot == -1)
         {
-            ImGui::TextDisabled("(Click 'Set' on a slot above to assign a Skylander)");
+            ImGui::SeparatorText("Library");
             ImGui::Spacing();
-        }
 
-        // dim the library when no slot is being changed
-        ImGui::BeginDisabled(activeChangeSlot == -1);
+            if (ImGui::Button(ICON_MD_ADD " Open Skylander Creator"))
+                UI::Get()->SetCreatorVisible(true);
 
-        const auto& library = Skylanders::SkylanderManager::Get().GetLibrary();
+            ImGui::Spacing();
 
-        const char* elementIcons[] = {
-            ICON_SKY_AIR, ICON_SKY_EARTH, ICON_SKY_FIRE, ICON_SKY_LIFE,
-            ICON_SKY_MAGIC, ICON_SKY_TECH, ICON_SKY_UNDEAD, ICON_SKY_WATER,
-            ICON_SKY_MINIS, ICON_SKY_NEW
-        };
-
-        const char* elementNames[] = {
-            "Air", "Earth", "Fire", "Life", "Magic", "Tech", "Undead", "Water"
-        };
-        constexpr int numElements = 8;
-
-        int currentElement = -1;
-        bool colorsPushed = false;
-        bool elementHeaderOpen = false;
-
-        for (const auto& charCat : Skylanders::g_skylanderDb)
-        {
-            const int elemIdx = static_cast<int>(charCat.element);
-            if (elemIdx >= numElements) continue; // skip SIDEKICK / ITEM
-
-            // collect owned variants, checks all figure IDs in the category, not just [0]
-            std::vector<const Skylanders::LoadedSkylander*> owned;
-            for (const auto& sky : library)
+            if (activeChangeSlot == -1)
             {
-                for (size_t f = 0; f < charCat.numFigures; ++f)
+                ImGui::TextDisabled("(Click 'Set' on a slot above to assign a Skylander)");
+                ImGui::Spacing();
+            }
+
+            // dim the library when no slot is being changed
+            ImGui::BeginDisabled(activeChangeSlot == -1);
+
+            const auto& library = Skylanders::SkylanderManager::Get().GetLibrary();
+
+            const char* elementIcons[] = {
+                ICON_SKY_AIR, ICON_SKY_EARTH, ICON_SKY_FIRE, ICON_SKY_LIFE,
+                ICON_SKY_MAGIC, ICON_SKY_TECH, ICON_SKY_UNDEAD, ICON_SKY_WATER
+            };
+
+            const char* elementNames[] = {
+                "Air", "Earth", "Fire", "Life", "Magic", "Tech", "Undead", "Water"
+            };
+            constexpr int numElements = 8;
+
+            int currentElement = -1;
+            bool colorsPushed = false;
+            bool elementHeaderOpen = false;
+
+            for (const auto& charCat : Skylanders::g_skylanderDb)
+            {
+                const int elemIdx = static_cast<int>(charCat.element);
+                if (elemIdx >= numElements) continue; // skip SIDEKICK / ITEM
+
+                // collect owned variants, checks all figure IDs in the category, not just [0]
+                std::vector<const Skylanders::LoadedSkylander*> owned;
+                for (const auto& sky : library)
                 {
-                    if (sky.figureId == charCat.figures[f].figureId &&
-                        sky.variantId == charCat.figures[f].variantId)
+                    for (size_t f = 0; f < charCat.numFigures; ++f)
                     {
-                        owned.push_back(&sky);
-                        break;
+                        if (sky.figureId == charCat.figures[f].figureId &&
+                            sky.variantId == charCat.figures[f].variantId)
+                        {
+                            owned.push_back(&sky);
+                            break;
+                        }
                     }
                 }
+                if (owned.empty()) continue;
+
+                // element transition, close previous section, open new one
+                if (elemIdx != currentElement)
+                {
+                    if (elementHeaderOpen) ImGui::Unindent();
+                    if (colorsPushed) ImGui::PopStyleColor(6);
+
+                    currentElement = elemIdx;
+                    ImVec4 hdrColor = GetElementColor(static_cast<Skylanders::Element>(elemIdx));
+                    ImGui::PushStyleColor(ImGuiCol_Header, hdrColor);
+                    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(hdrColor.x * 1.2f, hdrColor.y * 1.2f, hdrColor.z * 1.2f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(hdrColor.x * 0.8f, hdrColor.y * 0.8f, hdrColor.z * 0.8f, 1.0f));
+
+                    ImGui::PushStyleColor(ImGuiCol_Button, hdrColor);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(hdrColor.x * 1.2f, hdrColor.y * 1.2f, hdrColor.z * 1.2f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(hdrColor.x * 1.2f, hdrColor.y * 1.2f, hdrColor.z * 1.2f, 1.0f));
+                    colorsPushed = true;
+
+                    std::string headerText = std::string(elementIcons[elemIdx]) + " " + elementNames[elemIdx];
+                    elementHeaderOpen = ImGui::CollapsingHeader(headerText.c_str());
+                    if (elementHeaderOpen) ImGui::Indent();
+                }
+
+                if (!elementHeaderOpen) continue;
+
+                // character sub-header
+                if (ImGui::CollapsingHeader(charCat.displayName))
+                {
+                    ImGui::Indent();
+
+                    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f)); // left-align text in buttons
+                    for (const auto* variant : owned)
+                    {
+                        std::string label = variant->displayName;
+                        if (!variant->nickName.empty())
+                            label += " (\"" + variant->nickName + "\")";
+                        label += "##" + variant->filename;
+
+                        if (ImGui::ButtonEx(label.c_str(), ImVec2(-1, 0)) && activeChangeSlot >= 0)
+                        {
+                            emu->LoadSkylander(activeChangeSlot, variant->filePath);
+                            activeChangeSlot = -1;
+                        }
+                    }
+                    ImGui::PopStyleVar();
+                    ImGui::Unindent();
+                }
             }
-            if (owned.empty()) continue;
 
-            // element transition, close previous section, open new one
-            if (elemIdx != currentElement)
-            {
-                if (elementHeaderOpen) ImGui::Unindent();
-                if (colorsPushed) ImGui::PopStyleColor(6);
+            // close the last open element section
+            if (elementHeaderOpen) ImGui::Unindent();
+            if (colorsPushed) ImGui::PopStyleColor(6);
 
-                currentElement = elemIdx;
-                ImVec4 hdrColor = GetElementColor(static_cast<Skylanders::Element>(elemIdx));
-                ImGui::PushStyleColor(ImGuiCol_Header, hdrColor);
-                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(hdrColor.x * 1.2f, hdrColor.y * 1.2f, hdrColor.z * 1.2f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(hdrColor.x * 0.8f, hdrColor.y * 0.8f, hdrColor.z * 0.8f, 1.0f));
 
-                ImGui::PushStyleColor(ImGuiCol_Button, hdrColor);
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(hdrColor.x * 1.2f, hdrColor.y * 1.2f, hdrColor.z * 1.2f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(hdrColor.x * 1.2f, hdrColor.y * 1.2f, hdrColor.z * 1.2f, 1.0f));
-                colorsPushed = true;
-
-                std::string headerText = std::string(elementIcons[elemIdx]) + " " + elementNames[elemIdx];
-                elementHeaderOpen = ImGui::CollapsingHeader(headerText.c_str());
-                if (elementHeaderOpen) ImGui::Indent();
-            }
-
-            if (!elementHeaderOpen) continue;
-
-            // character sub-header
-            if (ImGui::CollapsingHeader(charCat.displayName))
+            if (ImGui::CollapsingHeader(ICON_SKY_MINIS " Sidekicks"))
             {
                 ImGui::Indent();
-
-                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f)); // left-align text in buttons
-                for (const auto* variant : owned)
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
+                for (const auto& info : Skylanders::g_skylanderMinisDb)
                 {
-                    std::string label = variant->displayName;
-                    if (!variant->nickName.empty())
-                        label += " (\"" + variant->nickName + "\")";
-                    label += "##" + variant->filename;
-
+                    std::string label = std::string(info.displayName) + "##mini" + std::to_string(info.figureId);
                     if (ImGui::ButtonEx(label.c_str(), ImVec2(-1, 0)) && activeChangeSlot >= 0)
                     {
-                        emu->LoadSkylander(activeChangeSlot, variant->filePath);
+                        emu->LoadTemporaryFigure(activeChangeSlot, info.figureId, info.variantId, Skylanders::SkylanderManager::GetVariantLabel(info).c_str());
+                        activeChangeSlot = -1;
+                    }
+                }
+                ImGui::PopStyleVar();
+
+                ImGui::Unindent();
+            }
+
+            if (ImGui::CollapsingHeader(ICON_SKY_VEHICLES " Items"))
+            {
+                ImGui::Indent();
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
+                for (const auto& info : Skylanders::g_skylanderItemsDb)
+                {
+                    std::string label = std::string(info.displayName) + "##item" + std::to_string(info.figureId);
+                    if (ImGui::ButtonEx(label.c_str(), ImVec2(-1, 0)) && activeChangeSlot >= 0)
+                    {
+                        emu->LoadTemporaryFigure(activeChangeSlot, info.figureId, info.variantId, Skylanders::SkylanderManager::GetVariantLabel(info).c_str());
                         activeChangeSlot = -1;
                     }
                 }
                 ImGui::PopStyleVar();
                 ImGui::Unindent();
             }
+
+            if (ImGui::CollapsingHeader(ICON_SKY_NEW " Adventure Packs"))
+            {
+                ImGui::Indent();
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
+                for (const auto& info : Skylanders::g_skylanderAdventureDb)
+                {
+                    std::string label = std::string(info.displayName) + "##adv" + std::to_string(info.figureId);
+                    if (ImGui::ButtonEx(label.c_str(), ImVec2(-1, 0)) && activeChangeSlot >= 0)
+                    {
+                        emu->LoadTemporaryFigure(activeChangeSlot, info.figureId, info.variantId, Skylanders::SkylanderManager::GetVariantLabel(info).c_str());
+                        activeChangeSlot = -1;
+                    }
+                }
+                ImGui::PopStyleVar();
+                ImGui::Unindent();
+            }
+
+            ImGui::EndDisabled();
         }
-
-        // close the last open element section
-        if (elementHeaderOpen) ImGui::Unindent();
-        if (colorsPushed) ImGui::PopStyleColor(6);
-
-        ImGui::EndDisabled();
     }
 } // namespace ssa::UIPages
