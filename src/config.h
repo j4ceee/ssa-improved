@@ -31,13 +31,13 @@ namespace ssa
         bool disableGrass = false; // prevents grass patches from rendering
 
         // Game
-        bool emulatedPortal = false;
-        // if true, the physical portal is ignored and all portal interactions are emulated in software (see portal/backend/EmulatedBackend.h)
-        bool emulatedPortalStartup = false;
-        // value of emulated portal during startup (should be used everywhere where emulated portal needs to be checked)
+        bool emulatedPortal = false; // if true, the physical portal is ignored and all portal interactions are emulated in software (see portal/backend/EmulatedBackend.h)
+        bool emulatedPortalStartup = false; // value of emulated portal during startup (should be used everywhere where emulated portal needs to be checked)
 
         // Mod
         float uiFontScale = 1.0f;
+        bool textureMods = true; // enable texture mods
+        bool textureDump = false; // dump all in-game textures to disk (for modders)
         LogLevel logLevel = LogLevel::INFO; // log level (OFF, INFO, DEBUG, VERBOSE)
     };
 
@@ -87,6 +87,8 @@ namespace ssa
         LogF("[Config] Disable grass: %d", g_config.disableGrass);
         LogF("[Config] Emulated portal: %d", g_config.emulatedPortal);
         LogF("[Config] Font scale: %.1f", g_config.uiFontScale);
+        LogF("[Config] Texture mods: %d", g_config.textureMods);
+        LogF("[Config] Texture dump: %d", g_config.textureDump);
     }
 
     // -------------------------------------------------------------------------
@@ -146,6 +148,11 @@ namespace ssa
             L"[Mod]\n"
             L"; Scale of the font of the in-game UI (1.0 = default size, 2.0 = double size, etc.)\n"
             L"FontScale=%.1f\n"
+            L"; Enable texture mods (0 = disabled, 1 = enabled (default))\n"
+            L"TextureMods=%d\n"
+            L"; Dump in-game textures to disk for modding purposes (0 = disabled (default), 1 = enabled)\n"
+            L"; Warning: for mod creators only, this will write lots of files!\n"
+            L"TextureDump=%d\n"
             L"; Log level (0 = OFF, 1 = INFO, 2 = DEBUG, 3 = VERBOSE) - leave unchanged unless you need to debug an issue\n"
             L"LogLevel=%d\n",
 
@@ -171,6 +178,8 @@ namespace ssa
 
             // Mod
             g_config.uiFontScale,
+            static_cast<int>(g_config.textureMods),
+            static_cast<int>(g_config.textureDump),
             static_cast<int>(g_config.logLevel)
         );
 
@@ -238,6 +247,9 @@ namespace ssa
         // Mod
         float fontScale = getFloat(L"Mod", L"FontScale", 1.0f);
         g_config.uiFontScale = std::max(0.5f, std::min(3.0f, fontScale));
+
+        g_config.textureMods = getInt(L"Mod", L"TextureMods", 1);
+        g_config.textureDump = getInt(L"Mod", L"TextureDump", 0);
 
         int logLevelValue = getInt(L"Mod", L"LogLevel", static_cast<int>(LogLevel::INFO));
         g_config.logLevel = static_cast<LogLevel>(std::max(0, std::min(3, logLevelValue)));
@@ -354,6 +366,18 @@ namespace ssa
     {
         g_config.uiFontScale = std::max(0.5f, std::min(3.0f, value));
         ImGui::GetIO().FontGlobalScale = g_config.uiFontScale;
+        SaveConfig();
+    }
+
+    inline void EnableTextureMods(bool value)
+    {
+        g_config.textureMods = value;
+        SaveConfig();
+    }
+
+    inline void EnableTextureDump(bool value)
+    {
+        g_config.textureDump = value;
         SaveConfig();
     }
 

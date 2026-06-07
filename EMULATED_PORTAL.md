@@ -33,7 +33,7 @@ There are two ways to enable it:
 
 **Via the config file**
 
-Open `ssa_impr_mod.ini` in the game directory with a text editor and set:
+Open `ssa_impr_mod.ini` in the `ssa-improved` directory with a text editor and set:
 ```ini
 EmulatedPortal=1
 ```

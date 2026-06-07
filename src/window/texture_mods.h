@@ -1,0 +1,305 @@
+#pragma once
+#include <Windows.h>
+#include <d3d9.h>
+#include <unordered_map>
+#include <unordered_set>
+#include <filesystem>
+#include <cstdint>
+#include <algorithm>
+
+#include "DDSTextureLoader9.h"
+#include "ScreenGrab9.h"
+#include "config.h"
+#include "log.h"
+
+namespace ssa::TextureMods
+{
+    namespace fs = std::filesystem;
+
+    using SetTexture_t = HRESULT(WINAPI*)(IDirect3DDevice9*, DWORD, IDirect3DBaseTexture9*);
+    inline SetTexture_t orig_SetTexture = nullptr;
+
+    inline bool g_reloadPending = false;
+
+    // -------------------------------------------------------------------------
+    // state
+    // -------------------------------------------------------------------------
+
+    // maps game texture pointer → content hash (0 = unlockable / skip)
+    inline std::unordered_map<IDirect3DTexture9*, uint32_t> g_ptrToHash;
+
+    // maps content hash → loaded replacement texture
+    // stored as IDirect3DBaseTexture9* (matches DDSTextureLoader9's output type & lets us swap pTex in hook_SetTexture without any cast)
+    inline std::unordered_map<uint32_t, IDirect3DBaseTexture9*> g_replacements;
+
+    // hashes already written to disk this session, prevents re-dumping on re-bind
+    inline std::unordered_set<uint32_t> g_dumped;
+
+    // set to true once Load() has run
+    inline bool g_loaded = false;
+
+    // -------------------------------------------------------------------------
+    // Path helpers
+    // -------------------------------------------------------------------------
+
+    inline std::wstring GetModDir()
+    {
+        wchar_t modulePath[MAX_PATH] = {};
+        GetModuleFileNameW(nullptr, modulePath, MAX_PATH);
+        return (fs::path(modulePath).parent_path() / "ssa-improved").wstring();
+    }
+
+    inline std::wstring GetTexturesDir() { return (fs::path(GetModDir()) / "textures").wstring(); }
+    inline std::wstring GetDumpDir() { return (fs::path(GetModDir()) / "dumps" / "textures").wstring(); }
+
+    /**
+     * FNV-1a 32-bit hash
+     * @param data
+     * @param len
+     * @return
+     */
+    inline uint32_t FNV1a32(const uint8_t* data, size_t len)
+    {
+        uint32_t h = 2166136261u;
+        for (size_t i = 0; i < len; ++i)
+            h = (h ^ data[i]) * 16777619u;
+        return h;
+    }
+
+    /**
+     * Get display name for formats (used for dump filenames so modders can identify textures)
+     * @param fmt
+     * @return
+     */
+    inline const char* FormatName(D3DFORMAT fmt)
+    {
+        switch (fmt)
+        {
+            case D3DFMT_DXT1: return "DXT1";
+            case D3DFMT_DXT2: return "DXT2";
+            case D3DFMT_DXT3: return "DXT3";
+            case D3DFMT_DXT4: return "DXT4";
+            case D3DFMT_DXT5: return "DXT5";
+            case D3DFMT_A8R8G8B8: return "A8R8G8B8";
+            case D3DFMT_X8R8G8B8: return "X8R8G8B8";
+            case D3DFMT_A8: return "A8";
+            case D3DFMT_L8: return "L8";
+            case D3DFMT_A4R4G4B4: return "A4R4G4B4";
+            default: return "UNK";
+        }
+    }
+
+    /**
+     * Hashes mip 0 of a 2D texture via a read-only lock
+     * @param pTex
+     * @return Hash or 0 if the texture can't or shouldn't be hashed (e.g. render targets, dynamic textures, lock fails, etc.)
+     */
+    inline uint32_t HashTexture(IDirect3DTexture9* pTex)
+    {
+        D3DSURFACE_DESC desc;
+        if (FAILED(pTex->GetLevelDesc(0, &desc)))
+            return 0; // failed to get description, skip this texture
+
+        // skip render targets: can't lock with READONLY, and we never want to replace them
+        // skip dynamic textures (font atlases, UI sprite sheets): same pointer different content every frame
+        if (desc.Usage & D3DUSAGE_RENDERTARGET) return 0;
+        if (desc.Usage & D3DUSAGE_DYNAMIC) return 0;
+
+        D3DLOCKED_RECT lr;
+        if (FAILED(pTex->LockRect(0, &lr, nullptr, D3DLOCK_READONLY)))
+            return 0; // failed to lock, skip this texture
+
+        // for DXT: Pitch = bytes per row of 4x4 blocks; block rows = ceil(H/4).
+        // or uncompressed: total data = Pitch x Height.
+        bool isBC = (desc.Format == D3DFMT_DXT1 || desc.Format == D3DFMT_DXT2 ||
+            desc.Format == D3DFMT_DXT3 || desc.Format == D3DFMT_DXT4 ||
+            desc.Format == D3DFMT_DXT5);
+
+        size_t dataBytes;
+        if (isBC)
+        {
+            UINT blockRows = std::max(1u, (desc.Height + 3u) / 4u);
+            dataBytes = static_cast<size_t>(lr.Pitch) * blockRows;
+        }
+        else
+        {
+            dataBytes = static_cast<size_t>(lr.Pitch) * desc.Height;
+        }
+
+        uint32_t hash = FNV1a32(static_cast<const uint8_t*>(lr.pBits), dataBytes);
+        pTex->UnlockRect(0);
+
+        // remap unlikely FNV output of 0 to avoid collision with "unlockable" state
+        return hash != 0 ? hash : 1u;
+    }
+
+    /**
+     * Saves mip 0 of a game texture as DDS once per hash per session, via ScreenGrab9's SaveDDSTextureToFile
+     * (if desired, mipmaps should be generated by modders when making texture replacements)<br>
+     * Generated name: <code><HASH>_<W>x<H>_<FMT>.dds</code><br>
+     * To use dumped files as replacements, rename to <code><HASH>.dds</code> and drop in <code>ssa-improved/textures/</code>
+     * @param pTex
+     * @param hash
+     */
+    inline void Dump(IDirect3DTexture9* pTex, uint32_t hash)
+    {
+        if (g_dumped.count(hash)) return;
+        g_dumped.insert(hash);
+
+        D3DSURFACE_DESC desc;
+        if (FAILED(pTex->GetLevelDesc(0, &desc))) return;
+
+        // SaveDDSTextureToFile takes IDirect3DSurface9* -> pull mip 0 out with GetSurfaceLevel first
+        IDirect3DSurface9* pSurface = nullptr;
+        if (FAILED(pTex->GetSurfaceLevel(0, &pSurface)) || !pSurface) return;
+
+        std::wstring dumpDir = GetDumpDir();
+        fs::create_directories(dumpDir);
+
+        wchar_t filename[128];
+        swprintf_s(filename, L"%08X_%ux%u_%hs.dds",
+                   hash, desc.Width, desc.Height, FormatName(desc.Format));
+
+        std::wstring outPath = (fs::path(dumpDir) / filename).wstring();
+
+        HRESULT hr = DirectX::SaveDDSTextureToFile(pSurface, outPath.c_str());
+        pSurface->Release();
+
+        if (SUCCEEDED(hr))
+            LogDebug("[TextureMods] Dumped %08X (%ux%u %s)",
+                     hash, desc.Width, desc.Height, FormatName(desc.Format));
+        else
+            Log("[TextureMods] Dump failed for %08X hr=0x%08X", hash, hr);
+    }
+
+    /**
+     * Scans <code>ssa-improved/textures/</code> for <code><HASH>.dds</code> replacement files and loads them via DDSTextureLoader9<br>
+     * Called once from hook_Present at startup and called again after every reset
+     * @param pDevice
+     */
+    inline void Load(IDirect3DDevice9* pDevice)
+    {
+        g_loaded = true;
+
+        std::wstring texDir = GetTexturesDir();
+        if (!fs::exists(texDir))
+        {
+            fs::create_directories(texDir);
+            return;
+        }
+
+        if (!g_config.textureMods)
+            return;
+
+        int loaded = 0, failed = 0, skipped = 0;
+
+        for (const auto& entry : fs::directory_iterator(texDir))
+        {
+            if (!entry.is_regular_file()) continue;
+
+            const auto& path = entry.path();
+            if (_wcsicmp(path.extension().c_str(), L".dds") != 0) continue;
+
+            // filename must be a plain hex hash, nothing else
+            std::wstring stem = path.stem().wstring();
+            wchar_t* parseEnd = nullptr;
+            unsigned long hashVal = wcstoul(stem.c_str(), &parseEnd, 16);
+            if (!parseEnd || *parseEnd != L'\0' || hashVal == 0)
+            {
+                Log("[TextureMods] Skipping '%ls': not a valid hex hash filename",
+                    path.filename().c_str());
+                skipped++;
+                continue;
+            }
+
+            auto hash = static_cast<uint32_t>(hashVal);
+
+            IDirect3DBaseTexture9* pReplacement = nullptr;
+            HRESULT hr = DirectX::CreateDDSTextureFromFile(
+                pDevice, path.c_str(), &pReplacement);
+
+            if (SUCCEEDED(hr) && pReplacement)
+            {
+                g_replacements[hash] = pReplacement;
+                LogDebug("[TextureMods] Loaded replacement %08X", hash);
+                loaded++;
+            }
+            else
+            {
+                Log("[TextureMods] Failed to load '%ls' hr=0x%08X",
+                    path.filename().c_str(), hr);
+                failed++;
+            }
+        }
+
+        Log("[TextureMods] Replacements: %d loaded, %d failed, %d skipped",
+            loaded, failed, skipped);
+    }
+
+    /**
+     * Clears the pointer → hash cache & triggers reload of all textures by releasing replacements and clearing the hash → replacement map
+     */
+    inline void OnReset()
+    {
+        // DDSTextureLoader9 creates textures in D3DPOOL_DEFAULT -> must be released before Reset
+        // hook_Present will call Load() again to recreate them
+        for (auto& [hash, pTex] : g_replacements)
+            if (pTex) pTex->Release();
+        g_replacements.clear();
+        g_loaded = false;
+
+        g_ptrToHash.clear();
+        Log("[TextureMods] Released DEFAULT pool replacements on Reset");
+    }
+
+    /**
+     * Hot Reload<br>
+     * Useful for mod authors to see changes without restarting the game
+     * @param pDevice
+     */
+    inline void Reload(IDirect3DDevice9* pDevice)
+    {
+        for (auto& [hash, pTex] : g_replacements)
+            if (pTex) pTex->Release();
+        g_replacements.clear();
+        // g_ptrToHash intentionally preserved, game texture hashes don't change
+        Load(pDevice);
+    }
+
+    // -------------------------------------------------------------------------
+    // Hook: SetTexture
+    // -------------------------------------------------------------------------
+    inline HRESULT WINAPI hook_SetTexture(IDirect3DDevice9* pDevice, DWORD Stage, IDirect3DBaseTexture9* pTex)
+    {
+        if (pTex && (g_config.textureMods || g_config.textureDump))
+        {
+            // only handle plain 2D textures, cube and volume textures pass through
+            if (pTex->GetType() == D3DRTYPE_TEXTURE)
+            {
+                auto* pTex2D = static_cast<IDirect3DTexture9*>(pTex);
+
+                // hash on first encounter, emplace(ptr, 0) inserts only if the pointer isn't already known, so HashTexture is called exactly once
+                auto [it, inserted] = g_ptrToHash.emplace(pTex2D, 0u);
+                if (inserted)
+                    it->second = HashTexture(pTex2D);
+
+                const uint32_t hash = it->second;
+                if (hash != 0)
+                {
+                    if (g_config.textureDump)
+                        Dump(pTex2D, hash);
+
+                    if (g_config.textureMods)
+                    {
+                        auto repl = g_replacements.find(hash);
+                        if (repl != g_replacements.end())
+                            pTex = repl->second;
+                    }
+                }
+            }
+        }
+
+        return orig_SetTexture(pDevice, Stage, pTex);
+    }
+
+} // namespace ssa::TextureMods
