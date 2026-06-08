@@ -107,10 +107,14 @@ _Note: you need to have Python installed on your system (most Linux distribution
 - see [EMULATED_PORTAL.md](https://github.com/j4ceee/ssa-improved/blob/main/EMULATED_PORTAL.md) for detailed instructions on how to use the emulated portal and create custom Skylanders for it
 
 ### <a id="create-tex" name="create-tex"></a>Creating texture mods
-  - Enable texture dumping in the config or UI to dump in-game textures to the `ssa-improved/dumps/textures` folder, these can be used as a base for creating custom textures
-  - Dumped textures follow the naming convention `<HASH>_<W>x<H>_<FMT>.dds`, meanwhile files in the `ssa-improved/textures` folder should be named `<HASH>.dds` keeping the same hash as the dumped texture you want to replace
-  - Replaced textures can be of a higher or lower resolution than the original but must have the same aspect ratio. If unsure, also keep the original format (`FMT`) (e.g. `DXT1`, `DXT5`, etc.) and generate mipmaps
-  - In the in-game UI you can trigger a hot reload of textures to see your changes immediately in-game without needing to restart the game
+1. Enable texture dumping in the config file or UI to dump in-game textures to the `ssa-improved/dumps/textures` folder, these can be used as a base for creating custom textures
+    - Dumped textures follow the naming convention `<HASH>_<W>x<H>_<FMT>.dds`
+2. Open the dumped texture you want to replace / edit in an image editing software (e.g. [GIMP](https://www.gimp.org/))
+3. Edit the texture as you like, then save it as a `.dds` file with the same hash as the original dumped texture (e.g. if the dumped texture is named `abc123_512x512_DXT5.dds`, name your edited texture `abc123.dds`) and place it in the `ssa-improved/textures` folder
+   - Files in the `ssa-improved/textures` folder should be named `<HASH>.dds`
+   - Replaced textures can be of a higher or lower resolution than the original but must have the same aspect ratio. If unsure, also keep the original format (`FMT`) (e.g. `DXT1`, `DXT5`, etc.) and generate mipmaps
+   - Texture mods can be grouped in subfolders inside the `ssa-improved/textures`
+- In the in-game UI you can trigger a hot reload of textures to see your changes immediately in-game without needing to restart the game
 
 ## Credits
 - Developed by [jacee](https://github.com/j4ceee)

@@ -16,9 +16,6 @@ namespace ssa::TextureMods
 {
     namespace fs = std::filesystem;
 
-    using SetTexture_t = HRESULT(WINAPI*)(IDirect3DDevice9*, DWORD, IDirect3DBaseTexture9*);
-    inline SetTexture_t orig_SetTexture = nullptr;
-
     inline bool g_reloadPending = false;
 
     // -------------------------------------------------------------------------
@@ -26,14 +23,14 @@ namespace ssa::TextureMods
     // -------------------------------------------------------------------------
 
     // maps game texture pointer → content hash (0 = unlockable / skip)
-    inline std::unordered_map<IDirect3DTexture9*, uint32_t> g_ptrToHash;
+    inline std::unordered_map<IDirect3DTexture9*, uint64_t> g_ptrToHash;
 
     // maps content hash → loaded replacement texture
     // stored as IDirect3DBaseTexture9* (matches DDSTextureLoader9's output type & lets us swap pTex in hook_SetTexture without any cast)
-    inline std::unordered_map<uint32_t, IDirect3DBaseTexture9*> g_replacements;
+    inline std::unordered_map<uint64_t, IDirect3DBaseTexture9*> g_replacements;
 
     // hashes already written to disk this session, prevents re-dumping on re-bind
-    inline std::unordered_set<uint32_t> g_dumped;
+    inline std::unordered_set<uint64_t> g_dumped;
 
     // set to true once Load() has run
     inline bool g_loaded = false;
@@ -53,17 +50,17 @@ namespace ssa::TextureMods
     inline std::wstring GetDumpDir() { return (fs::path(GetModDir()) / "dumps" / "textures").wstring(); }
 
     /**
-     * FNV-1a 32-bit hash
+     * FNV-1a 64-bit hash
      * @param data
      * @param len
      * @return
      */
-    inline uint32_t FNV1a32(const uint8_t* data, size_t len)
+    inline uint64_t FNV1a64(const uint8_t* data, size_t len)
     {
-        uint32_t h = 2166136261u;
+        uint64_t h = 14695981039346656037ull;
         for (size_t i = 0; i < len; ++i)
-            h = (h ^ data[i]) * 16777619u;
-        return h;
+            h = (h ^ data[i]) * 1099511628211ull;
+        return h != 0 ? h : 1ull;
     }
 
     /**
@@ -94,7 +91,7 @@ namespace ssa::TextureMods
      * @param pTex
      * @return Hash or 0 if the texture can't or shouldn't be hashed (e.g. render targets, dynamic textures, lock fails, etc.)
      */
-    inline uint32_t HashTexture(IDirect3DTexture9* pTex)
+    inline uint64_t HashTexture(IDirect3DTexture9* pTex)
     {
         D3DSURFACE_DESC desc;
         if (FAILED(pTex->GetLevelDesc(0, &desc)))
@@ -126,11 +123,10 @@ namespace ssa::TextureMods
             dataBytes = static_cast<size_t>(lr.Pitch) * desc.Height;
         }
 
-        uint32_t hash = FNV1a32(static_cast<const uint8_t*>(lr.pBits), dataBytes);
+        uint64_t hash = FNV1a64(static_cast<const uint8_t*>(lr.pBits), dataBytes);
         pTex->UnlockRect(0);
 
-        // remap unlikely FNV output of 0 to avoid collision with "unlockable" state
-        return hash != 0 ? hash : 1u;
+        return hash;
     }
 
     /**
@@ -141,7 +137,7 @@ namespace ssa::TextureMods
      * @param pTex
      * @param hash
      */
-    inline void Dump(IDirect3DTexture9* pTex, uint32_t hash)
+    inline void Dump(IDirect3DTexture9* pTex, uint64_t hash)
     {
         if (g_dumped.count(hash)) return;
         g_dumped.insert(hash);
@@ -157,7 +153,7 @@ namespace ssa::TextureMods
         fs::create_directories(dumpDir);
 
         wchar_t filename[128];
-        swprintf_s(filename, L"%08X_%ux%u_%hs.dds",
+        swprintf_s(filename, L"%016llX_%ux%u_%hs.dds",
                    hash, desc.Width, desc.Height, FormatName(desc.Format));
 
         std::wstring outPath = (fs::path(dumpDir) / filename).wstring();
@@ -166,10 +162,10 @@ namespace ssa::TextureMods
         pSurface->Release();
 
         if (SUCCEEDED(hr))
-            LogDebug("[TextureMods] Dumped %08X (%ux%u %s)",
+            LogDebug("[TextureMods] Dumped %016llX (%ux%u %s)",
                      hash, desc.Width, desc.Height, FormatName(desc.Format));
         else
-            Log("[TextureMods] Dump failed for %08X hr=0x%08X", hash, hr);
+            Log("[TextureMods] Dump failed for %016llX hr=0x%08X", hash, hr);
     }
 
     /**
@@ -193,7 +189,7 @@ namespace ssa::TextureMods
 
         int loaded = 0, failed = 0, skipped = 0;
 
-        for (const auto& entry : fs::directory_iterator(texDir))
+        for (const auto& entry : fs::recursive_directory_iterator(texDir))
         {
             if (!entry.is_regular_file()) continue;
 
@@ -203,7 +199,7 @@ namespace ssa::TextureMods
             // filename must be a plain hex hash, nothing else
             std::wstring stem = path.stem().wstring();
             wchar_t* parseEnd = nullptr;
-            unsigned long hashVal = wcstoul(stem.c_str(), &parseEnd, 16);
+            unsigned long long hashVal = wcstoull(stem.c_str(), &parseEnd, 16);
             if (!parseEnd || *parseEnd != L'\0' || hashVal == 0)
             {
                 Log("[TextureMods] Skipping '%ls': not a valid hex hash filename",
@@ -212,7 +208,7 @@ namespace ssa::TextureMods
                 continue;
             }
 
-            auto hash = static_cast<uint32_t>(hashVal);
+            auto hash = static_cast<uint64_t>(hashVal);
 
             IDirect3DBaseTexture9* pReplacement = nullptr;
             HRESULT hr = DirectX::CreateDDSTextureFromFile(
@@ -221,7 +217,7 @@ namespace ssa::TextureMods
             if (SUCCEEDED(hr) && pReplacement)
             {
                 g_replacements[hash] = pReplacement;
-                LogDebug("[TextureMods] Loaded replacement %08X", hash);
+                LogDebug("[TextureMods] Loaded replacement %016llX", hash);
                 loaded++;
             }
             else
@@ -247,6 +243,7 @@ namespace ssa::TextureMods
             if (pTex) pTex->Release();
         g_replacements.clear();
         g_loaded = false;
+        g_reloadPending = false;
 
         g_ptrToHash.clear();
         Log("[TextureMods] Released DEFAULT pool replacements on Reset");
@@ -267,39 +264,35 @@ namespace ssa::TextureMods
     }
 
     // -------------------------------------------------------------------------
-    // Hook: SetTexture
+    // Hook Execution: SetTexture
     // -------------------------------------------------------------------------
-    inline HRESULT WINAPI hook_SetTexture(IDirect3DDevice9* pDevice, DWORD Stage, IDirect3DBaseTexture9* pTex)
+    inline IDirect3DBaseTexture9* HandleSetTexture(IDirect3DDevice9* pDevice, DWORD Stage, IDirect3DBaseTexture9* pTex)
     {
-        if (pTex && (g_config.textureMods || g_config.textureDump))
+        // only handle plain 2D textures, cube and volume textures pass through
+        if (pTex->GetType() == D3DRTYPE_TEXTURE)
         {
-            // only handle plain 2D textures, cube and volume textures pass through
-            if (pTex->GetType() == D3DRTYPE_TEXTURE)
+            auto* pTex2D = static_cast<IDirect3DTexture9*>(pTex);
+
+            // hash on first encounter, emplace(ptr, 0) inserts only if the pointer isn't already known, so HashTexture is called exactly once
+            auto [it, inserted] = g_ptrToHash.emplace(pTex2D, 0u);
+            if (inserted)
+                it->second = HashTexture(pTex2D);
+
+            const uint64_t hash = it->second;
+            if (hash != 0)
             {
-                auto* pTex2D = static_cast<IDirect3DTexture9*>(pTex);
+                if (g_config.textureDump)
+                    Dump(pTex2D, hash);
 
-                // hash on first encounter, emplace(ptr, 0) inserts only if the pointer isn't already known, so HashTexture is called exactly once
-                auto [it, inserted] = g_ptrToHash.emplace(pTex2D, 0u);
-                if (inserted)
-                    it->second = HashTexture(pTex2D);
-
-                const uint32_t hash = it->second;
-                if (hash != 0)
+                if (g_config.textureMods)
                 {
-                    if (g_config.textureDump)
-                        Dump(pTex2D, hash);
-
-                    if (g_config.textureMods)
-                    {
-                        auto repl = g_replacements.find(hash);
-                        if (repl != g_replacements.end())
-                            pTex = repl->second;
-                    }
+                    auto repl = g_replacements.find(hash);
+                    if (repl != g_replacements.end())
+                        pTex = repl->second;
                 }
             }
         }
-
-        return orig_SetTexture(pDevice, Stage, pTex);
+        return pTex;
     }
 
 } // namespace ssa::TextureMods

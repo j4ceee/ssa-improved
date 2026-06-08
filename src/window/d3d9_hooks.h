@@ -41,6 +41,7 @@ namespace ssa::D3D9Hooks
     inline SetViewport_t                orig_SetViewport                = nullptr;
     inline SetScissorRect_t             orig_SetScissorRect             = nullptr;
     inline SetPixelShaderConstantF_t    orig_SetPixelShaderConstantF    = nullptr;
+    inline SetTexture_t                 orig_SetTexture                 = nullptr;
 
     // -------------------------------------------------------------------------
     // state
@@ -253,6 +254,19 @@ namespace ssa::D3D9Hooks
         }
         return orig_SetScissorRect(pDevice, pRect);
     }
+
+    // -------------------------------------------------------------------------
+    // Hook: SetTexture
+    // -------------------------------------------------------------------------
+    inline HRESULT WINAPI hook_SetTexture(IDirect3DDevice9* pDevice, DWORD Stage, IDirect3DBaseTexture9* pTex)
+    {
+        if (pTex && (g_config.textureMods || g_config.textureDump))
+        {
+            pTex = TextureMods::HandleSetTexture(pDevice, Stage, pTex);
+        }
+        return orig_SetTexture(pDevice, Stage, pTex);
+    }
+
 
     // -------------------------------------------------------------------------
     // Hook: SetSamplerState - anisotropic filtering + LOD bias
@@ -473,7 +487,7 @@ namespace ssa::D3D9Hooks
                     {29,    (void*)&hook_CreateDepthStencilSurface, (void**)&orig_CreateDepthStencilSurface,"CreateDepthStencilSurface" },
                     {42,    (void*)&hook_EndScene,                  (void**)&orig_EndScene,                 "EndScene"                  },
                     {47,    (void*)&hook_SetViewport,               (void**)&orig_SetViewport,              "SetViewport"               },
-                    {65,    (void*)&TextureMods::hook_SetTexture,   (void**)&TextureMods::orig_SetTexture,  "SetTexture"                },
+                    {65,    (void*)&hook_SetTexture,                (void**)&orig_SetTexture,               "SetTexture"                },
                     {69,    (void*)&hook_SetSamplerState,           (void**)&orig_SetSamplerState,          "SetSamplerState"           },
                     {75,    (void*)&hook_SetScissorRect,            (void**)&orig_SetScissorRect,           "SetScissorRect"            },
                     {109,   (void*)&hook_SetPixelShaderConstantF,   (void**)&orig_SetPixelShaderConstantF,  "SetPixelShaderConstantF"   },
