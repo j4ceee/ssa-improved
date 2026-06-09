@@ -8,6 +8,7 @@
 #include "log.h"
 #include "MinHook.h"
 #include "window_hooks.h"
+#include "texture_mods.h"
 #include "patches.h"
 #include "game/grassPatch.h"
 
@@ -27,19 +28,20 @@ namespace ssa::D3D9Hooks
     using SetViewport_t                 = HRESULT(WINAPI*)(IDirect3DDevice9*, const D3DVIEWPORT9*);
     using SetScissorRect_t              = HRESULT(WINAPI*)(IDirect3DDevice9*, const RECT*);
     using SetPixelShaderConstantF_t     = HRESULT(WINAPI*)(IDirect3DDevice9*, UINT, const float*, UINT);
+    using SetTexture_t                  = HRESULT(WINAPI*)(IDirect3DDevice9*, DWORD, IDirect3DBaseTexture9*);
 
-
-    inline Direct3DCreate9_t           orig_Direct3DCreate9           = nullptr;
-    inline CreateDevice_t              orig_CreateDevice              = nullptr;
-    inline Reset_t                     orig_Reset                     = nullptr;
-    inline EndScene_t                  orig_EndScene                  = nullptr;
-    inline Present_t                   orig_Present                   = nullptr;
-    inline SetSamplerState_t           orig_SetSamplerState           = nullptr;
-    inline CreateTexture_t             orig_CreateTexture             = nullptr;
-    inline CreateDepthStencilSurface_t orig_CreateDepthStencilSurface = nullptr;
-    inline SetViewport_t               orig_SetViewport               = nullptr;
-    inline SetScissorRect_t            orig_SetScissorRect            = nullptr;
-    inline SetPixelShaderConstantF_t   orig_SetPixelShaderConstantF   = nullptr;
+    inline Direct3DCreate9_t            orig_Direct3DCreate9            = nullptr;
+    inline CreateDevice_t               orig_CreateDevice               = nullptr;
+    inline Reset_t                      orig_Reset                      = nullptr;
+    inline EndScene_t                   orig_EndScene                   = nullptr;
+    inline Present_t                    orig_Present                    = nullptr;
+    inline SetSamplerState_t            orig_SetSamplerState            = nullptr;
+    inline CreateTexture_t              orig_CreateTexture              = nullptr;
+    inline CreateDepthStencilSurface_t  orig_CreateDepthStencilSurface  = nullptr;
+    inline SetViewport_t                orig_SetViewport                = nullptr;
+    inline SetScissorRect_t             orig_SetScissorRect             = nullptr;
+    inline SetPixelShaderConstantF_t    orig_SetPixelShaderConstantF    = nullptr;
+    inline SetTexture_t                 orig_SetTexture                 = nullptr;
 
     // -------------------------------------------------------------------------
     // state
@@ -254,6 +256,19 @@ namespace ssa::D3D9Hooks
     }
 
     // -------------------------------------------------------------------------
+    // Hook: SetTexture
+    // -------------------------------------------------------------------------
+    inline HRESULT WINAPI hook_SetTexture(IDirect3DDevice9* pDevice, DWORD Stage, IDirect3DBaseTexture9* pTex)
+    {
+        if (pTex && (g_config.textureMods || g_config.textureDump))
+        {
+            pTex = TextureMods::HandleSetTexture(pDevice, Stage, pTex);
+        }
+        return orig_SetTexture(pDevice, Stage, pTex);
+    }
+
+
+    // -------------------------------------------------------------------------
     // Hook: SetSamplerState - anisotropic filtering + LOD bias
     // -------------------------------------------------------------------------
     inline HRESULT WINAPI hook_SetSamplerState(IDirect3DDevice9* pDevice, DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD Value)
@@ -345,6 +360,16 @@ namespace ssa::D3D9Hooks
             }
         }
 
+        // handle texture mods
+        if (TextureMods::g_reloadPending)
+        {
+            TextureMods::g_reloadPending = false;
+            TextureMods::Reload(pDevice);
+        }
+
+        if ((g_config.textureMods || g_config.textureDump) && !TextureMods::g_loaded)
+            TextureMods::Load(pDevice);
+
         // initialize game hooks on first rendered frame (to bypass SecuROM)
         if (!g_deferredHooksActive)
             InitDeferredHooks();
@@ -411,6 +436,8 @@ namespace ssa::D3D9Hooks
             ImGui_ImplDX9_InvalidateDeviceObjects();
         }
 
+        TextureMods::OnReset();
+
         HRESULT hr = orig_Reset(pDevice, pp);
 
         // tell ImGui to rebuild its DirectX resources after the reset succeeds
@@ -454,15 +481,16 @@ namespace ssa::D3D9Hooks
                 };
 
                 DeviceHook hooks[] = {
-                    {   16, (void*)&hook_Reset,                     (void**)&orig_Reset,                    "Reset"                     },
-                    {   17, (void*)&hook_Present,                   (void**)&orig_Present,                  "Present"                   },
-                    {   23, (void*)&hook_CreateTexture,             (void**)&orig_CreateTexture,            "CreateTexture"             },
-                    {   29, (void*)&hook_CreateDepthStencilSurface, (void**)&orig_CreateDepthStencilSurface,"CreateDepthStencilSurface" },
-                    {   42, (void*)&hook_EndScene,                  (void**)&orig_EndScene,                 "EndScene"                  },
-                    {   47, (void*)&hook_SetViewport,               (void**)&orig_SetViewport,              "SetViewport"               },
-                    {   69, (void*)&hook_SetSamplerState,           (void**)&orig_SetSamplerState,          "SetSamplerState"           },
-                    {   75, (void*)&hook_SetScissorRect,            (void**)&orig_SetScissorRect,           "SetScissorRect"            },
-                    {   109,(void*)&hook_SetPixelShaderConstantF,   (void**)&orig_SetPixelShaderConstantF,  "SetPixelShaderConstantF"   },
+                    {16,    (void*)&hook_Reset,                     (void**)&orig_Reset,                    "Reset"                     },
+                    {17,    (void*)&hook_Present,                   (void**)&orig_Present,                  "Present"                   },
+                    {23,    (void*)&hook_CreateTexture,             (void**)&orig_CreateTexture,            "CreateTexture"             },
+                    {29,    (void*)&hook_CreateDepthStencilSurface, (void**)&orig_CreateDepthStencilSurface,"CreateDepthStencilSurface" },
+                    {42,    (void*)&hook_EndScene,                  (void**)&orig_EndScene,                 "EndScene"                  },
+                    {47,    (void*)&hook_SetViewport,               (void**)&orig_SetViewport,              "SetViewport"               },
+                    {65,    (void*)&hook_SetTexture,                (void**)&orig_SetTexture,               "SetTexture"                },
+                    {69,    (void*)&hook_SetSamplerState,           (void**)&orig_SetSamplerState,          "SetSamplerState"           },
+                    {75,    (void*)&hook_SetScissorRect,            (void**)&orig_SetScissorRect,           "SetScissorRect"            },
+                    {109,   (void*)&hook_SetPixelShaderConstantF,   (void**)&orig_SetPixelShaderConstantF,  "SetPixelShaderConstantF"   },
                 };
 
                 bool allOk = true;

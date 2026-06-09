@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_GENERATOR_PLATFORM Win32)
 
 # Global defines
-add_definitions(-DWIN32 -D_WIN32_WINNT=0x0601)
+add_definitions(-DWIN32 -D_WIN32_WINNT=0x0602)
 
 # Configuration-specific settings
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -53,6 +53,9 @@ target_compile_definitions(xinput1_3 PRIVATE
 target_include_directories(xinput1_3 PRIVATE
     src
     deps/minhook/include
+    deps/directxtex/DirectXTex          # dds.h (shared internal header)
+    deps/directxtex/DDSTextureLoader    # DDSTextureLoader9.h
+    deps/directxtex/ScreenGrab          # ScreenGrab9.h
 )
 
 file(GLOB_RECURSE SHIM_SOURCES
@@ -62,6 +65,8 @@ file(GLOB_RECURSE SHIM_SOURCES
 target_sources(xinput1_3 PRIVATE
     ${SHIM_SOURCES}
     src/xinput1_3.def
+    deps/directxtex/DDSTextureLoader/DDSTextureLoader9.cpp
+    deps/directxtex/ScreenGrab/ScreenGrab9.cpp
 )
 
 target_link_libraries(xinput1_3 PRIVATE

@@ -2,6 +2,8 @@
 #include "../fonts/IconsMaterialDesign.h"
 #include <imgui.h>
 #include "config.h"
+#include "addresses.h"
+#include "window/texture_mods.h"
 
 namespace ssa::UIPages
 {
@@ -18,6 +20,31 @@ namespace ssa::UIPages
             }
             ImGui::SameLine();
             UI::HelpMarker("Adjusts the scale of the UI font.");
+
+            bool textureModsEnabled = g_config.textureMods;
+            if (ImGui::Checkbox("Enable Texture Mods", &textureModsEnabled))
+            {
+                EnableTextureMods(textureModsEnabled);
+            }
+            ImGui::SameLine();
+            UI::HelpMarker("Allows loading custom textures from the ssa-improved/textures/ directory.",
+                "Requires game restart");
+
+            if (ImGui::Button(ICON_MD_REFRESH " Reload Textures"))
+            {
+                TextureMods::g_reloadPending = true;
+            }
+            ImGui::SameLine();
+            UI::HelpMarker("Hot reloads textures without restarting the game. Can be used when adding or modifying texture mods to see changes immediately.");
+
+            bool dumpTextures = g_config.textureDump;
+            if (ImGui::Checkbox("Dump Textures", &dumpTextures))
+            {
+                EnableTextureDump(dumpTextures);
+            }
+            ImGui::SameLine();
+            UI::HelpMarker("Dumps textures to the ssa-improved/dumps/textures/ directory as they are loaded in-game.",
+                "For mod creators only, this will write lots of files!");
         }
 
         ImGui::Spacing();
@@ -86,6 +113,10 @@ namespace ssa::UIPages
             ImGui::SameLine();
             UI::HelpMarker("Prevents grass patches from rendering, which will bring major performance improvements in areas with high foliage density.",
                 "Disabling this requires reloading the current level before grass becomes visible again.");
+
+            UI::StartDisabledText();
+            ImGui::TextWrapped("Rendered grass areas: %d", *static_cast<int*>(GetAddress(GRASS_COUNT)));
+            UI::EndDisabledText();
         }
 
         ImGui::Spacing();

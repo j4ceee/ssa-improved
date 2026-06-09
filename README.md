@@ -34,10 +34,19 @@
 - Texture sharpness control
 - Grass rendering toggle (disabling grass rendering brings major performance improvements in areas with high foliage density)
 
-## Configuration
-- after launching the game with the mod installed for the first time, a folder called `ssa-improved` will be created in your game directory (where `Skylanders.exe` is located)
-- inside this folder you will find a `ssa_impr_mod.ini` file
-- open this file with a text editor to configure the mod settings
+### Texture mods
+- Custom textures can be loaded from the `ssa-improved/textures` folder
+- For instructions on how to create custom textures, see the [Usage](#create-tex) section below
+
+## <a id="config" name="config"></a>Configuration
+- there are 2 ways to configure the mod settings:
+  1. through the in-game UI
+     - press `F1` on your keyboard or `L3` + `R3` on a controller (both sticks pressed simultaneously) to open the mod UI
+     - in the UI you can change the settings and they will automatically be saved to the `ssa_impr_mod.ini` file (some settings require a game restart to take effect, these will be indicated in the UI)
+  2. by editing the `ssa_impr_mod.ini` file directly with a text editor
+     - after launching the game with the mod installed for the first time, a folder called `ssa-improved` will be created in your game directory (where `Skylanders.exe` is located)
+     - inside this folder you will find a `ssa_impr_mod.ini` file
+     - open this file with a text editor to configure the mod settings
 
 ### Available settings
 | Setting            | Default | Description                                                                                                                                                                                                                                                                                             |
@@ -55,6 +64,8 @@
 | `DisableGrass`     | `0`     | Disabling grass rendering (value = `1`) brings major performance improvements in areas with high foliage density                                                                                                                                                                                        |
 | `EmulatedPortal`   | `0`     | Use a fully emulated portal instead of a physical USB device. When enabled (value = `1`) physical portals are ignored and Skylanders can be chosen over the in-game mod UI.                                                                                                                             |
 | `FontScale`        | `1.0`   | Scale of the font of the in-game UI (`1.0` = default size, `2.0` = double size, etc.)                                                                                                                                                                                                                   |
+| `TextureMods`      | `1`     | Set to `1` to enable loading of custom textures from the `ssa-improved/textures` folder, or `0` to disable it.                                                                                                                                                                                          |
+| `TextureDump`      | `0`     | Set to `1` to enable dumping of in-game textures to the `ssa-improved/dumps` folder, or `0` to disable it. Useful for modders for creating custom textures.                                                                                                                                             |
 
 ## Installation
 
@@ -89,14 +100,39 @@ _Note: you need to have Python installed on your system (most Linux distribution
 5. Move all the files mentioned above to your _Skylanders Spyro's Adventure_ installation directory (where `Skylanders.exe` is located)
 6. Inside your _Skylanders Spyro's Adventure_ installation directory make `portal_launch.sh` executable 
    - Steam Deck: right-click the file in the file manager → `Properties` → `Permissions` tab → check `Allow executing file as program` → click `OK`
-7. add _Skylanders Spyro's Adventure_ to Steam
+7. Add _Skylanders Spyro's Adventure_ to Steam
    - Steam Deck: right-click on `Skylanders.exe` in the file manager → `Add to Steam`
-8. use `Proton 10.0-4` as the compatibility tool for the game (or any other, the mentioned version is confirmed working)
-9. add `./portal_launch.sh %command%` to your launch options for _Skylanders Spyro's Adventure_ in Steam
+8. Use `Proton 10.0-4` as the compatibility tool for the game (or any other, the mentioned version is confirmed working)
+9. Add `./portal_launch.sh %command%` to your launch options for _Skylanders Spyro's Adventure_ in Steam
 10. Done🎉 You can now launch the game from Steam
+
+## Usage
+
+### Emulated Portal of Power
+- see [EMULATED_PORTAL.md](https://github.com/j4ceee/ssa-improved/blob/main/EMULATED_PORTAL.md) for detailed instructions on how to use the emulated portal and create custom Skylanders for it
+
+### <a id="create-tex" name="create-tex"></a>Creating texture mods
+1. Enable texture dumping in the config file or UI to dump in-game textures to the `ssa-improved/dumps/textures` folder, these can be used as a base for creating custom textures
+    - Dumped textures follow the naming convention `<HASH>_<W>x<H>_<FMT>.dds`
+2. Open the dumped texture you want to replace / edit in an image editing software (e.g. [GIMP](https://www.gimp.org/))
+3. Edit the texture as you like, then export it as a `.dds` file named `<HASH>.dds` (e.g. if the dumped texture is `ABC123_512x512_DXT5.dds`, name your file `ABC123.dds`) and place it in the `ssa-improved/textures/` folder
+   - **Resolution:** Replacements can be any resolution, but should have the same aspect ratio as the original (otherwise they will appear stretched), and both dimensions **must be multiples of 4** (power-of-two recommended, e.g. 256x256, 512x512, but something like 512x256 also works)
+   - **Format:** If you're unsure, keep the same compression format as the original (`DXT1`, `DXT5`, etc.). If you want to learn more about these texture formats and which one is the best fit for you, see [this guide](https://episims.tumblr.com/post/743688032850493440/differences-between-dxt1-dxt3-dxt5) ([archived](https://web.archive.org/web/20260213162846/https://episims.tumblr.com/post/743688032850493440/differences-between-dxt1-dxt3-dxt5))
+   - **Mipmaps:** These are reduced-size copies of your texture used for distant objects to improve performance and reduce visual artefacts. If your replaced texture will be used for distant objects, it's recommended to generate mipmaps when exporting your texture (in practice: generate mipmaps for everything except UI textures)
+   - Texture mods can be grouped in subfolders inside the `ssa-improved/textures`
+4. In the in-game UI, click *Reload Textures* to see your changes immediately without restarting the game
 
 ## Credits
 - Developed by [jacee](https://github.com/j4ceee)
+- Portal Emulation based on...
+  - [Cemu](https://github.com/cemu-project/Cemu)
+  - [RPCS3](https://github.com/RPCS3/rpcs3)
+- UI created with...
+  - [ImGui](https://github.com/ocornut/imgui)
+  - Icons by Toys for Bob
+  - [Varela Round](https://fonts.google.com/specimen/Varela+Round) font by The Varela Round Project Authors (SIL Open Font License, 1.1)
+  - [Material Design Icons](https://github.com/google/material-design-icons/blob/master/font/MaterialIcons-Regular.ttf) by Google (Apache License 2.0)
+  - [IconFontCppHeaders](https://github.com/juliettef/IconFontCppHeaders) by Juliette Foucaut and Doug Binks (zlib License)
 
 ## Building
 
