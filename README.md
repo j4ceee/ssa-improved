@@ -110,11 +110,12 @@ _Note: you need to have Python installed on your system (most Linux distribution
 1. Enable texture dumping in the config file or UI to dump in-game textures to the `ssa-improved/dumps/textures` folder, these can be used as a base for creating custom textures
     - Dumped textures follow the naming convention `<HASH>_<W>x<H>_<FMT>.dds`
 2. Open the dumped texture you want to replace / edit in an image editing software (e.g. [GIMP](https://www.gimp.org/))
-3. Edit the texture as you like, then save it as a `.dds` file with the same hash as the original dumped texture (e.g. if the dumped texture is named `abc123_512x512_DXT5.dds`, name your edited texture `abc123.dds`) and place it in the `ssa-improved/textures` folder
-   - Files in the `ssa-improved/textures` folder should be named `<HASH>.dds`
-   - Replaced textures can be of a higher or lower resolution than the original but must have the same aspect ratio. If unsure, also keep the original format (`FMT`) (e.g. `DXT1`, `DXT5`, etc.) and generate mipmaps
+3. Edit the texture as you like, then export it as a `.dds` file named `<HASH>.dds` (e.g. if the dumped texture is `ABC123_512x512_DXT5.dds`, name your file `ABC123.dds`) and place it in the `ssa-improved/textures/` folder
+   - **Resolution:** Replacements can be any resolution, but should have the same aspect ratio as the original (otherwise they will appear stretched), and both dimensions **must be multiples of 4** (power-of-two recommended, e.g. 256x256, 512x512, but something like 512x256 also works)
+   - **Format:** If you're unsure, keep the same compression format as the original (`DXT1`, `DXT5`, etc.). If you want to learn more about these texture formats and which one is the best fit for you, see [this guide](https://episims.tumblr.com/post/743688032850493440/differences-between-dxt1-dxt3-dxt5) ([archived](https://web.archive.org/web/20260213162846/https://episims.tumblr.com/post/743688032850493440/differences-between-dxt1-dxt3-dxt5))
+   - **Mipmaps:** These are reduced-size copies of your texture used for distant objects to improve performance and reduce visual artefacts. If your replaced texture will be used for distant objects, it's recommended to generate mipmaps when exporting your texture (in practice: generate mipmaps for everything except UI textures)
    - Texture mods can be grouped in subfolders inside the `ssa-improved/textures`
-- In the in-game UI you can trigger a hot reload of textures to see your changes immediately in-game without needing to restart the game
+4. In the in-game UI, click *Reload Textures* to see your changes immediately without restarting the game
 
 ## Credits
 - Developed by [jacee](https://github.com/j4ceee)
