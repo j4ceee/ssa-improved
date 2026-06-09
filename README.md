@@ -38,10 +38,15 @@
 - Custom textures can be loaded from the `ssa-improved/textures` folder
 - For instructions on how to create custom textures, see the [Usage](#create-tex) section below
 
-## Configuration
-- after launching the game with the mod installed for the first time, a folder called `ssa-improved` will be created in your game directory (where `Skylanders.exe` is located)
-- inside this folder you will find a `ssa_impr_mod.ini` file
-- open this file with a text editor to configure the mod settings
+## <a id="config" name="config"></a>Configuration
+- there are 2 ways to configure the mod settings:
+  1. through the in-game UI
+     - press `F1` on your keyboard or `L3` + `R3` on a controller (both sticks pressed simultaneously) to open the mod UI
+     - in the UI you can change the settings and they will automatically be saved to the `ssa_impr_mod.ini` file (some settings require a game restart to take effect, these will be indicated in the UI)
+  2. by editing the `ssa_impr_mod.ini` file directly with a text editor
+     - after launching the game with the mod installed for the first time, a folder called `ssa-improved` will be created in your game directory (where `Skylanders.exe` is located)
+     - inside this folder you will find a `ssa_impr_mod.ini` file
+     - open this file with a text editor to configure the mod settings
 
 ### Available settings
 | Setting            | Default | Description                                                                                                                                                                                                                                                                                             |
