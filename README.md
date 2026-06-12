@@ -77,15 +77,16 @@ _While technically not required for this mod, it is recommended to download the 
    - e.g. `C:/Program Files (x86)/Activision/Skylanders Spyro's Adventure(TM)`
 
 ### Windows
-1. Download the latest release from the [Releases](https://github.com/j4ceee/ssa-improved/releases/latest)
-2. Extract the contents of the ZIP file
-3. You will find a folder named `SSA Improved` containing 2 folders (`Windows` & `Linux`), this `README.md` and a license file
-4. Open the `Windows` folder. You will find the following files:
+1. Ensure you have the latest [Visual C++ Redistributable](https://aka.ms/vc14/vc_redist.x86.exe) installed on your system
+2. Download the latest release from the [Releases](https://github.com/j4ceee/ssa-improved/releases/latest)
+3. Extract the contents of the ZIP file
+4. You will find a folder named `SSA Improved` containing 2 folders (`Windows` & `Linux`), this `README.md` and a license file
+5. Open the `Windows` folder. You will find the following files:
    - `xinput1_3.dll`
    - `version.json`
-5. Move all the files mentioned above to your _Skylanders Spyro's Adventure_ installation directory (where `Skylanders.exe` is located)
+6. Move all the files mentioned above to your _Skylanders Spyro's Adventure_ installation directory (where `Skylanders.exe` is located)
    - e.g. `C:/Program Files (x86)/Activision/Skylanders Spyro's Adventure(TM)`
-6. Done🎉 Run the game as administrator at least once to allow the mod to create necessary files and folders
+7. Done🎉 Run the game as administrator at least once to allow the mod to create necessary files and folders
 
 ### Linux / Steam Deck
 _Note: you need to have Python installed on your system (most Linux distributions come with Python pre-installed)_
