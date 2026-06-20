@@ -1,0 +1,126 @@
+#include "imgui/ui.h"
+#include "imgui/fonts/IconsMaterialDesign.h"
+#include <imgui.h>
+#include "config.h"
+#include "game/difficulty.h"
+
+namespace ssa::UIPages
+{
+    void RenderGameTab()
+    {
+        auto* scs = Game::SpyroCharacterSettings::instance();
+        auto& enemy = scs->m_enemySettings;
+        bool levelLoaded = enemy.m_pLevelAttribute != nullptr;
+
+        // Difficulty
+        // -----------------------------------------------------------------------------------------------------
+        if (ImGui::CollapsingHeader(ICON_MD_SPEED " Difficulty", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            // HP and damage are snapshot-based - disable until BuildSettings has populated the arrays
+            ImGui::SliderFloat("Enemy HP multiplier", &g_config.hpMult, 0.1f, 10.0f, "%.2fx");
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                SetEnemyHpMultiplier(g_config.hpMult);
+            ImGui::SameLine();
+            UI::HelpMarker("Scales enemy HP. This multiplier is applied to the base HP values of the enemies in the current level.");
+
+            ImGui::SliderFloat("Enemy damage multiplier", &g_config.dmgMult, 0.1f, 10.0f, "%.2fx");
+            if (ImGui::IsItemDeactivatedAfterEdit())
+            {
+                SetEnemyDmgMultiplier(g_config.dmgMult);
+            }
+            ImGui::SameLine();
+            UI::HelpMarker("Scales enemy damage. This multiplier is applied to the base damage values of the enemies in the current level.");
+
+            ImGui::Spacing();
+            ImGui::Spacing();
+
+            ImGui::SliderFloat("Heroic Challenge HP ceiling", &g_config.heroicHpCeiling, 0.1f, 10.0f, "%.2fx");
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                SetEnemyHpHeroicCeiling(g_config.heroicHpCeiling);
+            ImGui::SameLine();
+            UI::HelpMarker("Maximum HP enemies can have in Heroic Challenges. If you find that enemies in challenges are too weak, try increasing this.");
+
+            ImGui::SliderFloat("Heroic Challenge damage ceiling", &g_config.heroicDmgCeiling, 0.1f, 10.0f, "%.2fx");
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                SetEnemyDmgHeroicCeiling(g_config.heroicDmgCeiling);
+            ImGui::SameLine();
+            UI::HelpMarker("Maximum damage enemies can deal in Heroic Challenges. If you find that enemies in challenges are too weak, try increasing this.");
+
+            // Diagnostics
+            // -------------------------------------------------------------------------------------------------
+            ImGui::Spacing();
+            if (ImGui::TreeNode(ICON_MD_BUG_REPORT " Diagnostics"))
+            {
+                if (levelLoaded)
+                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.6f, 1.0f), ICON_MD_CHECK_CIRCLE " Level loaded");
+                else
+                    ImGui::TextColored(ImVec4(0.9f, 0.6f, 0.1f, 1.0f), ICON_MD_WARNING " Not in a level");
+
+                ImGui::TextDisabled("Singleton 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(scs)));
+                ImGui::TextDisabled("LevelAttr 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(enemy.m_pLevelAttribute)));
+                ImGui::TextDisabled("Snapshot 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(Difficulty::s_snapshotAttr)));
+
+                ImGui::Spacing();
+
+                static constexpr const char* kClassNames[8] = {
+                    "0 - Swarmer", "1 - Spawner", "2 - Unknown", "3 - Unknown", "4 - Unknown", "5 - Unknown", "6 - Unknown", "7 - Unknown",
+                };
+
+                if (ImGui::BeginTable("##enemy_stats", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+                {
+                    ImGui::TableSetupColumn("Class");
+                    ImGui::TableSetupColumn("HP (raw)");
+                    ImGui::TableSetupColumn("HP (current)");
+                    ImGui::TableSetupColumn("DMG (raw)");
+                    ImGui::TableSetupColumn("DMG (current)");
+                    ImGui::TableHeadersRow();
+
+                    for (int i = 0; i < 8; i++)
+                    {
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Text("%s", kClassNames[i]);
+
+                        if (levelLoaded)
+                        {
+                            ImGui::TableSetColumnIndex(1);
+                            ImGui::Text("%.2f", Difficulty::s_baseHpSnapshot[i]);
+                            ImGui::TableSetColumnIndex(2);
+                            ImGui::Text("%.2f", enemy.m_fBaseHP[i]);
+                            ImGui::TableSetColumnIndex(3);
+                            ImGui::Text("%.2f", Difficulty::s_baseDmgSnapshot[i]);
+                            ImGui::TableSetColumnIndex(4);
+                            ImGui::Text("%.2f", enemy.m_fBaseDamage[i]);
+                        }
+                        else
+                        {
+                            for (int c = 1; c < 5; c++)
+                            {
+                                ImGui::TableSetColumnIndex(c);
+                                ImGui::TextDisabled("--");
+                            }
+                        }
+                    }
+
+                    ImGui::EndTable();
+                }
+
+                ImGui::TreePop();
+            }
+        }
+
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        // Experience
+        // -----------------------------------------------------------------------------------------------------
+        if (ImGui::CollapsingHeader(ICON_MD_MILITARY_TECH " Experience", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::SliderFloat("XP multiplier", &g_config.xpMult, 0.1f, 10.0f, "%.2fx");
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                SetXpMultiplier(g_config.xpMult);
+            ImGui::SameLine();
+            UI::HelpMarker("Multiplies the amount of XP gained from defeating enemies");
+        }
+    }
+}

@@ -153,6 +153,7 @@ namespace ssa
     namespace UIPages
     {
         void RenderSettingsTab();
+        void RenderGameTab();
         void RenderPortalTab();
 
         void RenderCreator();

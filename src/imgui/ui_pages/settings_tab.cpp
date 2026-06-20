@@ -13,11 +13,9 @@ namespace ssa::UIPages
         // -----------------------------------------------------------------------------------------------------
         if (ImGui::CollapsingHeader(ICON_MD_BUILD " Mod", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            float fontScale = g_config.uiFontScale;
-            if (ImGui::DragFloat("UI Font Scale", &fontScale, 0.1f, 0.5f, 3.0f, "%.1f"))
-            {
-                SetFontScale(fontScale);
-            }
+            ImGui::DragFloat("UI Font Scale", &g_config.uiFontScale, 0.1f, 0.5f, 3.0f, "%.1f");
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                SetFontScale(g_config.uiFontScale);
             ImGui::SameLine();
             UI::HelpMarker("Adjusts the scale of the UI font.");
 
@@ -85,11 +83,9 @@ namespace ssa::UIPages
 
 
             // texture sharpness
-            int sharpness = g_config.textureSharpness;
-            if (ImGui::SliderInt("Texture Sharpness", &sharpness, 0, 20))
-            {
-                SetTextureSharpness(sharpness);
-            }
+            ImGui::SliderInt("Texture Sharpness", &g_config.textureSharpness, 0, 20);
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                SetTextureSharpness(g_config.textureSharpness);
             ImGui::SameLine();
             UI::HelpMarker("Adjusts the sharpness of distant textures. Higher levels may cause shimmering or aliasing on certain textures.");
         }

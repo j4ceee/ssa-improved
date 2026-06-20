@@ -34,6 +34,13 @@ namespace ssa
         bool emulatedPortal = false; // if true, the physical portal is ignored and all portal interactions are emulated in software (see portal/backend/EmulatedBackend.h)
         bool emulatedPortalStartup = false; // value of emulated portal during startup (should be used everywhere where emulated portal needs to be checked)
 
+        // Difficulty
+        float hpMult = 1.0f;
+        float dmgMult = 1.0f;
+        float heroicHpCeiling = 3.0f;
+        float heroicDmgCeiling = 0.1f;
+        float xpMult = 1.0f;
+
         // Mod
         float uiFontScale = 1.0f;
         bool textureMods = true; // enable texture mods
@@ -85,6 +92,11 @@ namespace ssa
         LogF("[Config] Supersampling multiplier: %.1f", g_config.ssMultiplier);
         LogF("[Config] Texture sharpness: %d (LOD bias: %.1f)", g_config.textureSharpness, g_config.lodBias);
         LogF("[Config] Disable grass: %d", g_config.disableGrass);
+        LogF("[Config] HP multiplier: %.2f", g_config.hpMult);
+        LogF("[Config] Damage multiplier: %.2f", g_config.dmgMult);
+        LogF("[Config] Heroic challenge HP ceiling: %.2f", g_config.heroicHpCeiling);
+        LogF("[Config] Heroic challenge damage ceiling: %.2f", g_config.heroicDmgCeiling);
+        LogF("[Config] XP multiplier: %.2f", g_config.xpMult);
         LogF("[Config] Emulated portal: %d", g_config.emulatedPortal);
         LogF("[Config] Font scale: %.1f", g_config.uiFontScale);
         LogF("[Config] Texture mods: %d", g_config.textureMods);
@@ -145,6 +157,18 @@ namespace ssa
             L"; When enabled, all other portal backends are ignored. Manage figures via the Portal tab in the mod menu.\n"
             L"EmulatedPortal=%d\n"
             L"\n"
+            L"[Difficulty]\n"
+            L"; Base HP multiplier for enemies (0.1 = 10%% HP, 1.0 = default HP (default), 10.0 = 1000%% HP)\n"
+            L"HpMult=%.2f\n"
+            L"; Base damage multiplier for enemies (0.1 = 10%% damage, 1.0 = default damage (default), 10.0 = 1000%% damage)\n"
+            L"DmgMult=%.2f\n"
+            L"; Max. HP enemies can have in Heroic Challenges (0.1 = 10%% HP, 3.0 = 300%% of base (default), 10.0 = 1000%% HP)\n"
+            L"HeroicHpCeiling=%.2f\n"
+            L"; Max. damage enemies deal in Heroic Challenges (0.1 = 10%% damage (default), 1.0 = base damage , 10.0 = 1000%% damage)\n"
+            L"HeroicDmgCeiling=%.2f\n"
+            L"; XP multiplier (0.1 = 10%% XP, 1.0 = default XP (default), 10.0 = 1000%% XP)\n"
+            L"XpMult=%.2f\n"
+            L"\n"
             L"[Mod]\n"
             L"; Scale of the font of the in-game UI (1.0 = default size, 2.0 = double size, etc.)\n"
             L"FontScale=%.1f\n"
@@ -175,6 +199,13 @@ namespace ssa
 
             // Game
             static_cast<int>(g_config.emulatedPortal),
+
+            // Difficulty
+            g_config.hpMult,
+            g_config.dmgMult,
+            g_config.heroicHpCeiling,
+            g_config.heroicDmgCeiling,
+            g_config.xpMult,
 
             // Mod
             g_config.uiFontScale,
@@ -243,6 +274,13 @@ namespace ssa
         // Game
         g_config.emulatedPortal = getInt(L"Game", L"EmulatedPortal", 0) != 0;
         g_config.emulatedPortalStartup = g_config.emulatedPortal; // cache initial value
+
+        // Difficulty
+        g_config.hpMult = getFloat(L"Difficulty", L"HpMult", 1.0f);
+        g_config.dmgMult = getFloat(L"Difficulty", L"DmgMult", 1.0f);
+        g_config.heroicHpCeiling = getFloat(L"Difficulty", L"HeroicHpCeiling", 3.0f);
+        g_config.heroicDmgCeiling = getFloat(L"Difficulty", L"HeroicDmgCeiling", 0.1f);
+        g_config.xpMult = getFloat(L"Difficulty", L"XpMult", 1.0f);
 
         // Mod
         float fontScale = getFloat(L"Mod", L"FontScale", 1.0f);
@@ -381,4 +419,33 @@ namespace ssa
         SaveConfig();
     }
 
+    inline void SetEnemyHpMultiplier(float value)
+    {
+        g_config.hpMult = std::max(0.1f, std::min(10.0f, value));
+        SaveConfig();
+    }
+
+    inline void SetEnemyDmgMultiplier(float value)
+    {
+        g_config.dmgMult = std::max(0.1f, std::min(10.0f, value));
+        SaveConfig();
+    }
+
+    inline void SetEnemyHpHeroicCeiling(float value)
+    {
+        g_config.heroicHpCeiling = std::max(0.1f, std::min(10.0f, value));
+        SaveConfig();
+    }
+
+    inline void SetEnemyDmgHeroicCeiling(float value)
+    {
+        g_config.heroicDmgCeiling = std::max(0.1f, std::min(10.0f, value));
+        SaveConfig();
+    }
+
+    inline void SetXpMultiplier(float value)
+    {
+        g_config.xpMult = std::max(0.1f, std::min(10.0f, value));
+        SaveConfig();
+    }
 } // namespace ssa

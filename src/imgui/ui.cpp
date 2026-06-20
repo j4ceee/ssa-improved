@@ -259,6 +259,13 @@ void UI::Render()
             ImGui::EndChild();
             ImGui::EndTabItem();
         }
+        if (ImGui::BeginTabItem("Game")) {
+            ImGui::BeginChild("GameContent", ImVec2(0, 0), false);
+            ImGui::Spacing();
+            UIPages::RenderGameTab();
+            ImGui::EndChild();
+            ImGui::EndTabItem();
+        }
         if (ImGui::BeginTabItem("Settings")) {
             ImGui::BeginChild("SettingsContent", ImVec2(0, 0), false);
             ImGui::Spacing();

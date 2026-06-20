@@ -7,6 +7,8 @@ namespace ssa
     void InitAddresses()
     {
         g_Address[MOUSE_DEVICE] = 0x00ca29e0; // DirectInput mouse device pointer
+
+        g_Address[SPYRO_CHARACTER_SETTINGS] = 0x00e55420;
         g_Address[GRASS_COUNT] = 0x00d9146c; // number of grass patches to draw (probably / maybe?)
 
 

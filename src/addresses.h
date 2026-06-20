@@ -5,8 +5,9 @@ namespace ssa
     enum Address
     {
         MOUSE_DEVICE,
-        GRASS_COUNT,
 
+        SPYRO_CHARACTER_SETTINGS,
+        GRASS_COUNT,
 
         // DIRECT GAME HOOKS ARE IMPOSSIBLE DUE TO SECUROM ---------------------------------------
         // input
