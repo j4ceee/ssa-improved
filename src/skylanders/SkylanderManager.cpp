@@ -311,8 +311,13 @@ namespace ssa::Skylanders
     {
         if (fig.fileAppend)
         {
-            if (std::strcmp(fig.fileAppend, "s2") == 0)
+
+            if (std::strncmp(fig.fileAppend, "s2", 2) == 0)
                 return std::string(ICON_SKY_SERIES_2) + " " + fig.displayName;
+            if (std::strncmp(fig.fileAppend, "s3", 2) == 0)
+                return std::string(ICON_SKY_SERIES_3) + " " + fig.displayName;
+            if (std::strncmp(fig.fileAppend, "s4", 2) == 0)
+                return std::string(ICON_SKY_SERIES_4) + " " + fig.displayName;
             if (std::strcmp(fig.fileAppend, "lightcore") == 0)
                 return std::string(ICON_SKY_LIGHTCORE) + " " + fig.displayName;
             if (std::strcmp(fig.fileAppend, "ee") == 0)

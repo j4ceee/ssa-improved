@@ -50,8 +50,8 @@ namespace ssa::Skylanders
     constexpr SkylanderInfo g_whirlwind[] = {
         {0, 0x0000, "Whirlwind"},
         {0, 0x1801, "Series 2 Whirlwind", "s2"},
-        {0, 0x1C02, "Polar Whirlwind", "polar"},
-        {0, 0x2805, "Horn Blast Whirlwind", "hb"},
+        {0, 0x1C02, "Polar Whirlwind", "s2_polar"},
+        {0, 0x2805, "Horn Blast Whirlwind", "s3"},
         {0, 0x3810, "Eon's Elite Whirlwind", "ee"},
     };
     // EARTH
@@ -67,21 +67,21 @@ namespace ssa::Skylanders
     constexpr SkylanderInfo g_prismBreak[] = {
         {7, 0x0000, "Prism Break"},
         {7, 0x1801, "Series 2 Prism Break", "s2"},
-        {7, 0x2805, "Hyper Beam Prism Break", "hb"},
+        {7, 0x2805, "Hyper Beam Prism Break", "s3"},
         {7, 0x1206, "LightCore Prism Break", "lightcore"},
     };
     constexpr SkylanderInfo g_terrafin[] = {
         {5, 0x0000, "Terrafin"},
         {5, 0x1801, "Series 2 Terrafin", "s2"},
-        {5, 0x2805, "Knockout Terrafin", "knockout"},
+        {5, 0x2805, "Knockout Terrafin", "s3"},
         {5, 0x3810, "Eon's Elite Terrafin", "ee"},
     };
     // FIRE
     constexpr SkylanderInfo g_eruptor[] = {
         {9, 0x0000, "Eruptor"},
         {9, 0x1801, "Series 2 Eruptor", "s2"},
-        {9, 0x2C02, "Volcanic Eruptor", "volcanic"},
-        {9, 0x2805, "Lava Barf Eruptor", "lava"},
+        {9, 0x2C02, "Volcanic Eruptor", "s3_volcanic"},
+        {9, 0x2805, "Lava Barf Eruptor", "s3"},
         {9, 0x1206, "LightCore Eruptor", "lightcore"},
         {9, 0x3810, "Eon's Elite Eruptor", "ee"},
     };
@@ -100,15 +100,15 @@ namespace ssa::Skylanders
     // LIFE
     constexpr SkylanderInfo g_camo[] = {
         {24, 0x0000, "Camo"},
-        {24, 0x2805, "Thorn Horn Camo", "th"},
+        {24, 0x2805, "Thorn Horn Camo", "s2_th"},
     };
     constexpr SkylanderInfo g_stealthElf[] = {
         {26, 0x0000, "Stealth Elf"},
         {26, 0x1801, "Series 2 Stealth Elf", "s2"},
+        {26, 0x2805, "Ninja Stealth Elf", "s3"},
+        {26, 0x3810, "Eon's Elite Stealth Elf", "ee"},
         {26, 0x2C02, "Dark Stealth Elf", "dark"},
         {26, 0x1C03, "Legendary Stealth Elf", "legendary"},
-        {26, 0x2805, "Ninja Stealth Elf", "ninja"},
-        {26, 0x3810, "Eon's Elite Stealth Elf", "ee"},
     };
     constexpr SkylanderInfo g_stumpSmash[] = {
         {27, 0x0000, "Stump Smash"},
@@ -123,13 +123,13 @@ namespace ssa::Skylanders
     constexpr SkylanderInfo g_doubleTrouble[] = {
         {18, 0x0000, "Double Trouble"},
         {18, 0x1801, "Series 2 Double Trouble", "s2"},
-        {18, 0x1C02, "Royal Double Trouble", "royal"},
+        {18, 0x1C02, "Royal Double Trouble", "s2_royal"},
     };
     constexpr SkylanderInfo g_spyro[] = {
         {16, 0x0000, "Spyro"},
         {16, 0x1801, "Series 2 Spyro", "s2"},
-        {16, 0x2C02, "Dark Mega Ram Spyro", "dmr"},
-        {16, 0x2805, "Mega Ram Spyro", "mr"},
+        {16, 0x2C02, "Dark Mega Ram Spyro", "s3_dmr"},
+        {16, 0x2805, "Mega Ram Spyro", "s3_mr"},
         {16, 0x3810, "Eon's Elite Spyro", "ee"},
         {28, 0x0000, "Dark Spyro", "dark"},
         {416, 0x0000, "Legendary Spyro", "legendary"},
@@ -159,8 +159,8 @@ namespace ssa::Skylanders
     constexpr SkylanderInfo g_triggerHappy[] = {
         {19, 0x0000, "Trigger Happy"},
         {19, 0x1801, "Series 2 Trigger Happy", "s2"},
-        {19, 0x2C02, "Springtime Trigger Happy", "springtime"},
-        {19, 0x2805, "Big Bang Trigger Happy", "bigbang"},
+        {19, 0x2805, "Big Bang Trigger Happy", "s3"},
+        {19, 0x2C02, "Springtime Trigger Happy", "s3_spring"},
         {19, 0x3810, "Eon's Elite Trigger Happy", "ee"},
         {419, 0x0000, "Legendary Trigger Happy", "legendary"},
     };
@@ -168,14 +168,14 @@ namespace ssa::Skylanders
     constexpr SkylanderInfo g_chopChop[] = {
         {30, 0x0000, "Chop Chop"},
         {30, 0x1801, "Series 2 Chop Chop", "s2"},
-        {30, 0x2805, "Twin Blade Chop Chop", "twinblade"},
+        {30, 0x2805, "Twin Blade Chop Chop", "s3"},
         {30, 0x3810, "Eon's Elite Chop Chop", "ee"},
         {430, 0x0000, "Legendary Chop Chop", "legendary"},
     };
     constexpr SkylanderInfo g_cynder[] = {
         {32, 0x0000, "Cynder"},
         {32, 0x1801, "Series 2 Cynder", "s2"},
-        {32, 0x2805, "Phantom Cynder", "phantom"},
+        {32, 0x2805, "Phantom Cynder", "s3"},
     };
     constexpr SkylanderInfo g_ghostRoaster[] = {
         {31, 0x0000, "Ghost Roaster"},
@@ -190,15 +190,15 @@ namespace ssa::Skylanders
     constexpr SkylanderInfo g_gillGrunt[] = {
         {14, 0x0000, "Gill Grunt"},
         {14, 0x1801, "Series 2 Gill Grunt", "s2"},
-        {14, 0x2805, "Anchors Away Gill Grunt", "aa"},
-        {14, 0x3805, "Tidal Wave Gill Grunt", "tidalwave"},
+        {14, 0x2805, "Anchors Away Gill Grunt", "s3"},
+        {14, 0x3805, "Tidal Wave Gill Grunt", "s4"},
         {14, 0x3810, "Eon's Elite Gill Grunt", "ee"},
     };
     constexpr SkylanderInfo g_slamBam[] = {
         {15, 0x0000, "Slam Bam"},
         {15, 0x1801, "Series 2 Slam Bam", "s2"},
-        {15, 0x1C03, "Legendary Slam Bam", "legendary"},
         {15, 0x4810, "Eon's Elite Slam Bam", "ee"},
+        {15, 0x1C03, "Legendary Slam Bam", "legendary"},
     };
     constexpr SkylanderInfo g_whamShell[] = {
         {13, 0x0000, "Wham Shell"},
