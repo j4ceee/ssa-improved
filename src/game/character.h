@@ -18,17 +18,21 @@ namespace ssa::Game
 
     struct Character
     {
-        char            _pad0[0x184];       // +0x000
-        int             contID;             // +0x184 controller index (0 = P1, 1 = P2); verified in-game
-        char            _pad1[0x4];         // +0x188
-        void*           m_pPad;             // +0x18C PadController* — non-null = locally controlled
-        char            _pad2[0x4C];        // +0x190
-        float           hpMultiplier;       // +0x1DC
+        char            _pad0[0x11C];       // +0x000
+        void*           m_pAttributes;      // +0x11C  CharacterAttributes* - null for boss Characters (bosses bypass EnemySettings because of this)
+        char            _pad1[0x3C];        // +0x120
+        uint32_t        nameID;             // +0x15C crc32 - identifies which character type this is
+        char            _pad2[0x24];        // +0x160
+        int             contID;             // +0x184 controller index (0=P1, 1=P2); verified in-game
+        char            _pad3[0x4];         // +0x188
+        void*           m_pPad;             // +0x18C PadController* - non-null = locally controlled
+        char            _pad4[0x4C];        // +0x190
+        float           hpMultiplier;       // +0x1DC Init calls SetHealth(baseHP * hpMultiplier)
         float           attackMultiplier;   // +0x1E0
-        float           baseHP;             // +0x1E4  set from data - do not write
-        char            _pad3[0xC8];        // +0x1E8
+        float           baseHP;             // +0x1E4 Init writes this directly
+        char            _pad5[0xC8];        // +0x1E8
         float           m_fCurrHealth;      // +0x2B0
-        char            _pad4[0x44];        // +0x2B4
+        char            _pad6[0x44];        // +0x2B4
         CharacterTeam   m_team;             // +0x2F8
     };
 
