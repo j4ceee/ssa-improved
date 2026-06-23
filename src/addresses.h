@@ -7,6 +7,8 @@ namespace ssa
         MOUSE_DEVICE,
 
         SPYRO_CHARACTER_SETTINGS,
+        CHARACTER_LIST,
+        CHARACTER_LIST_ALL, // all Character instances (enemies + players + neutral)
         GRASS_COUNT,
 
         // DIRECT GAME HOOKS ARE IMPOSSIBLE DUE TO SECUROM ---------------------------------------
