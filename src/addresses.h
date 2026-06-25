@@ -9,7 +9,13 @@ namespace ssa
         SPYRO_CHARACTER_SETTINGS,
         CHARACTER_LIST,
         CHARACTER_LIST_ALL, // all Character instances (enemies + players + neutral)
+        TARGETING_LIST,
         GRASS_COUNT,
+
+        // VTables
+        PLAYER_PAD_VTABLE,
+        AI_PAD_VTABLE,
+        REMOTE_PAD_VTABLE,
 
         // DIRECT GAME HOOKS ARE IMPOSSIBLE DUE TO SECUROM ---------------------------------------
         // input

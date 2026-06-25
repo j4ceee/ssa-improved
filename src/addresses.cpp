@@ -11,8 +11,13 @@ namespace ssa
         g_Address[SPYRO_CHARACTER_SETTINGS] = 0x00e55420;
         g_Address[CHARACTER_LIST] = 0x00ca2a54;
         g_Address[CHARACTER_LIST_ALL] = 0x00ca2a48;
+        g_Address[TARGETING_LIST] = 0x00e3ddf0;
         g_Address[GRASS_COUNT] = 0x00d9146c; // number of grass patches to draw (probably / maybe?)
 
+        // VTables
+        g_Address[PLAYER_PAD_VTABLE] = 0x00bb6414;
+        g_Address[AI_PAD_VTABLE]     = 0x00bb645c;
+        g_Address[REMOTE_PAD_VTABLE] = 0x00bb64a4;
 
         // DIRECT GAME HOOKS ARE IMPOSSIBLE DUE TO SECUROM ---------------------------------------
         g_Address[UPDATE_CONTROLLER] = 0x009475f0;

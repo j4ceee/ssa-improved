@@ -37,6 +37,7 @@ namespace ssa
         // Difficulty
         float hpMult = 1.0f;
         float dmgMult = 1.0f;
+        bool enemyHitReaction = true;
         float heroicHpCeiling = 3.0f;
         float heroicDmgCeiling = 0.1f;
         float xpMult = 1.0f;
@@ -94,6 +95,7 @@ namespace ssa
         LogF("[Config] Disable grass: %d", g_config.disableGrass);
         LogF("[Config] HP multiplier: %.2f", g_config.hpMult);
         LogF("[Config] Damage multiplier: %.2f", g_config.dmgMult);
+        LogF("[Config] Enemy hit reaction: %d", g_config.enemyHitReaction);
         LogF("[Config] Heroic challenge HP ceiling: %.2f", g_config.heroicHpCeiling);
         LogF("[Config] Heroic challenge damage ceiling: %.2f", g_config.heroicDmgCeiling);
         LogF("[Config] XP multiplier: %.2f", g_config.xpMult);
@@ -162,6 +164,8 @@ namespace ssa
             L"HpMult=%.2f\n"
             L"; Base damage multiplier for enemies (0.1 = 10%% damage, 1.0 = default damage (default), 10.0 = 1000%% damage)\n"
             L"DmgMult=%.2f\n"
+            L"; Enable enemy hit reaction (0 = disabled, 1 = enabled (default))\n"
+            L"EnemyHitReaction=%d\n"
             L"; Max. HP enemies can have in Heroic Challenges (0.1 = 10%% HP, 3.0 = 300%% of base (default), 10.0 = 1000%% HP)\n"
             L"HeroicHpCeiling=%.2f\n"
             L"; Max. damage enemies deal in Heroic Challenges (0.1 = 10%% damage (default), 1.0 = base damage , 10.0 = 1000%% damage)\n"
@@ -203,6 +207,7 @@ namespace ssa
             // Difficulty
             g_config.hpMult,
             g_config.dmgMult,
+            static_cast<int>(g_config.enemyHitReaction),
             g_config.heroicHpCeiling,
             g_config.heroicDmgCeiling,
             g_config.xpMult,
@@ -278,6 +283,7 @@ namespace ssa
         // Difficulty
         g_config.hpMult = getFloat(L"Difficulty", L"HpMult", 1.0f);
         g_config.dmgMult = getFloat(L"Difficulty", L"DmgMult", 1.0f);
+        g_config.enemyHitReaction = getInt(L"Difficulty", L"EnemyHitReaction", 1) != 0;
         g_config.heroicHpCeiling = getFloat(L"Difficulty", L"HeroicHpCeiling", 3.0f);
         g_config.heroicDmgCeiling = getFloat(L"Difficulty", L"HeroicDmgCeiling", 0.1f);
         g_config.xpMult = getFloat(L"Difficulty", L"XpMult", 1.0f);
@@ -428,6 +434,12 @@ namespace ssa
     inline void SetEnemyDmgMultiplier(float value)
     {
         g_config.dmgMult = std::max(0.1f, std::min(10.0f, value));
+        SaveConfig();
+    }
+
+    inline void SetEnemyHitReaction(bool value)
+    {
+        g_config.enemyHitReaction = value;
         SaveConfig();
     }
 
