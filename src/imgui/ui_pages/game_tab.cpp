@@ -2,18 +2,14 @@
 #include "imgui/fonts/IconsMaterialDesign.h"
 #include <imgui.h>
 #include "config.h"
-#include "game/difficulty.h"
 #include "game/character.h"
+#include "game/game.h"
 #include "imgui/fonts/IconsSkylanders.h"
 
 namespace ssa::UIPages
 {
     void RenderGameTab()
     {
-        auto* scs = Game::SpyroCharacterSettings::instance();
-        auto& enemy = scs->m_enemySettings;
-        bool levelLoaded = enemy.m_pLevelAttribute != nullptr;
-
         // Difficulty
         // -----------------------------------------------------------------------------------------------------
         if (ImGui::CollapsingHeader(ICON_MD_SPEED " Difficulty", ImGuiTreeNodeFlags_DefaultOpen))
@@ -58,158 +54,6 @@ namespace ssa::UIPages
                 SetEnemyDmgHeroicCeiling(g_config.heroicDmgCeiling);
             ImGui::SameLine();
             UI::HelpMarker("Maximum damage enemies can deal in Heroic Challenges. If you find that enemies in challenges are too weak, try increasing this.");
-
-            // Diagnostics
-            // -------------------------------------------------------------------------------------------------
-            ImGui::Spacing();
-            if (ImGui::TreeNode(ICON_MD_BUG_REPORT " Diagnostics"))
-            {
-                if (levelLoaded)
-                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.6f, 1.0f), ICON_MD_CHECK_CIRCLE " Level loaded");
-                else
-                    ImGui::TextColored(ImVec4(0.9f, 0.6f, 0.1f, 1.0f), ICON_MD_WARNING " Not in a level");
-
-                ImGui::TextDisabled("Singleton 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(scs)));
-                ImGui::TextDisabled("LevelAttr 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(enemy.m_pLevelAttribute)));
-                ImGui::TextDisabled("Snapshot 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(Difficulty::s_snapshotAttr)));
-
-                ImGui::Spacing();
-
-                static constexpr const char* kClassNames[8] = {
-                    "0 - Swarmer", "1 - Spawner", "2 - Unknown", "3 - Unknown", "4 - Unknown", "5 - Unknown", "6 - Unknown", "7 - Unknown",
-                };
-
-                if (ImGui::BeginTable("##enemy_stats", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
-                {
-                    ImGui::TableSetupColumn("Class");
-                    ImGui::TableSetupColumn("DMG (raw)");
-                    ImGui::TableSetupColumn("DMG (current)");
-                    ImGui::TableHeadersRow();
-
-                    for (int i = 0; i < 8; i++)
-                    {
-                        ImGui::TableNextRow();
-                        ImGui::TableSetColumnIndex(0);
-                        ImGui::Text("%s", kClassNames[i]);
-
-                        if (levelLoaded)
-                        {
-                            ImGui::TableSetColumnIndex(1);
-                            ImGui::Text("%.2f", Difficulty::s_baseDmgSnapshot[i]);
-                            ImGui::TableSetColumnIndex(2);
-                            ImGui::Text("%.2f", enemy.m_fBaseDamage[i]);
-                        }
-                        else
-                        {
-                            for (int c = 1; c < 3; c++)
-                            {
-                                ImGui::TableSetColumnIndex(c);
-                                ImGui::TextDisabled("--");
-                            }
-                        }
-                    }
-                    ImGui::EndTable();
-                }
-
-                {
-                    auto* list = Game::CharacterList::instanceAll();
-
-                    // limit to 64
-                    static constexpr int kMaxChars = 64;
-                    Game::Character* chars[kMaxChars];
-                    int count = 0;
-
-                    for (auto* node = list->begin(); node != list->end() && count < kMaxChars; node = node->next)
-                    {
-                        if (node->ptr)
-                            chars[count++] = node->ptr;
-                    }
-
-                    ImGui::TextDisabled("Characters in list: %d", count);
-                    ImGui::TextDisabled("Sentinel 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(list)));
-                    ImGui::Spacing();
-
-                    if (count == 0)
-                    {
-                        ImGui::TextDisabled("No characters found.");
-                    }
-                    else if (ImGui::BeginTable("##char_list", 8,
-                                               ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                                               ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY,
-                                               ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * (count + 2))))
-                    {
-                        ImGui::TableSetupColumn("Address");
-                        ImGui::TableSetupColumn("Team");
-                        ImGui::TableSetupColumn("nameID"); // +0x15C: crc32 identifying character type
-                        ImGui::TableSetupColumn("Attrs"); // +0x11C: non-null = regular enemy; null = boss Character
-                        ImGui::TableSetupColumn("Base HP");
-                        ImGui::TableSetupColumn("HP Mult");
-                        ImGui::TableSetupColumn("Atk Mult"); // +0x1E0: PDB-sourced, plausible values seen in-game
-                        ImGui::TableSetupColumn("Curr HP");
-                        ImGui::TableHeadersRow();
-
-                        for (int i = 0; i < count; i++)
-                        {
-                            auto* ch = chars[i];
-
-                            ImGui::TableNextRow();
-
-                            // Address
-                            ImGui::TableSetColumnIndex(0);
-                            ImGui::TextDisabled("0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(ch)));
-
-                            // Team
-                            ImGui::TableSetColumnIndex(1);
-                            switch (ch->m_team)
-                            {
-                            case Game::CharacterTeam::Skylander:
-                                ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.6f, 1.0f), "Skylander");
-                                break;
-                            case Game::CharacterTeam::Enemy:
-                                ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Enemy");
-                                break;
-                            case Game::CharacterTeam::Neutral:
-                                ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.4f, 1.0f), "Neutral");
-                                break;
-                            default:
-                                ImGui::TextDisabled("0x%08X", static_cast<uint32_t>(static_cast<int>(ch->m_team)));
-                                break;
-                            }
-
-                            // nameID - CRC identifying which character type (Zap, Spyro, troll, etc.)
-                            ImGui::TableSetColumnIndex(2);
-                            ImGui::TextDisabled("0x%08X", ch->nameID);
-
-                            // m_pAttributes - null = boss Character bypassing EnemySettings
-                            ImGui::TableSetColumnIndex(3);
-                            if (ch->m_pAttributes != nullptr)
-                                ImGui::TextDisabled("yes");
-                            else
-                                ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "null");
-
-                            // Base HP
-                            ImGui::TableSetColumnIndex(4);
-                            ImGui::Text("%.1f", ch->baseHP);
-
-                            // HP multiplier
-                            ImGui::TableSetColumnIndex(5);
-                            ImGui::Text("%.2f", ch->hpMultiplier);
-
-                            // Attack multiplier
-                            ImGui::TableSetColumnIndex(6);
-                            ImGui::Text("%.2f", ch->attackMultiplier);
-
-                            // Current HP
-                            ImGui::TableSetColumnIndex(7);
-                            ImGui::Text("%.1f", ch->m_fCurrHealth);
-                        }
-
-                        ImGui::EndTable();
-                    }
-                }
-
-                ImGui::TreePop();
-            }
         }
 
         ImGui::Spacing();
@@ -233,17 +77,17 @@ namespace ssa::UIPages
         // -----------------------------------------------------------------------------------------------------
         if (ImGui::CollapsingHeader(ICON_SKY_MAGIC " Skylanders", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            auto* list = Game::CharacterList::instanceSkylanders();
+            auto* list = Game::Character::instanceSkylandersList();
 
-            if (list->begin() == list->end())
+            if (!list || list->empty())
             {
                 ImGui::TextDisabled("No Skylanders on portal.");
             }
             else
             {
-                for (auto* node = list->begin(); node != list->end(); node = node->next)
+                for (const auto& ref : *list)
                 {
-                    auto* ch = node->ptr;
+                    auto* ch = ref.mPtr;
                     if (!ch) continue;
 
                     ImGui::PushID(static_cast<int>(reinterpret_cast<uintptr_t>(ch)));
@@ -299,5 +143,96 @@ namespace ssa::UIPages
             }
         }
 
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        // Level
+        // -----------------------------------------------------------------------------------------------------
+        if (ImGui::CollapsingHeader(ICON_MD_LANDSCAPE " Level", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            auto* game = Game::Game::instance();
+
+            if (auto* currentDesc = game->getCurrLevelDesc())
+            {
+                if (const auto* name = Game::Data::GetLevelDisplayInfo(currentDesc->m_Id))
+                {
+                    ImGui::TextDisabled("Current Level: %s", name->displayName);
+                }
+                else
+                {
+                    ImGui::TextDisabled("Current Level: %s", currentDesc->m_LevelFile.c_str());
+                }
+
+                if (std::strcmp(currentDesc->m_Category.c_str(), "PvP_Level") == 0)
+                    ImGui::BeginDisabled();
+
+                // --- Level selector
+                static uint32_t s_selectedCrc = 0;
+                static uint32_t s_lastSeenLevel = 0;
+                if (s_selectedCrc == 0 && (std::strcmp(currentDesc->m_LevelFile.c_str(), "FrontEnd") != 0))
+                {
+                    s_selectedCrc = game->m_CurrLevel; // pre-select current level on first open
+                }
+                if (game->m_CurrLevel != s_lastSeenLevel)
+                {
+                    s_selectedCrc = 0;
+                    s_lastSeenLevel = game->m_CurrLevel;
+                }
+
+                // returns the best available display label for a descriptor
+                auto levelLabel = [](const Game::LevelDesc& desc) -> const char*
+                {
+                    if (const auto* info = Game::Data::GetLevelDisplayInfo(desc.m_Id))
+                        return info->displayName;
+                    return desc.m_LevelFile.c_str();
+                };
+
+                // find preview string for the selected CRC
+                const char* preview = "Select a level...";
+                for (const auto& desc : game->m_GamePackage.m_Levels)
+                    if (desc.m_Id == s_selectedCrc) { preview = levelLabel(desc); break; }
+
+                if (ImGui::BeginCombo("##levelSelect", preview))
+                {
+                    for (const auto& desc : game->m_GamePackage.m_Levels)
+                    {
+                        if (std::strcmp(desc.m_Category.c_str(), "PvP_Level") == 0 ||
+                            std::strcmp(desc.m_Category.c_str(), "TestLevels") == 0 ||
+                            std::strcmp(desc.m_LevelFile.c_str(), "FrontEnd") == 0)
+                            continue;
+
+                        const bool isCurrent = desc.m_Id == game->m_CurrLevel;
+                        const bool isSelected = desc.m_Id == s_selectedCrc;
+
+                        if (isCurrent)
+                            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.9f, 0.5f, 1.0f));
+
+                        if (ImGui::Selectable(levelLabel(desc), isSelected))
+                            s_selectedCrc = desc.m_Id;
+
+                        if (isCurrent) ImGui::PopStyleColor();
+                        if (isSelected) ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+
+                ImGui::SameLine();
+
+                ImGui::BeginDisabled(s_selectedCrc == 0);
+                if (ImGui::Button("Load"))
+                {
+                    game->m_NextLevel = s_selectedCrc;
+                    game->m_bPrepareNextLevel = 1;
+                }
+                ImGui::EndDisabled();
+
+                if (std::strcmp(currentDesc->m_Category.c_str(), "PvP_Level") == 0)
+                    ImGui::EndDisabled();
+            }
+            else
+            {
+                ImGui::TextDisabled("Current Level: -");
+            }
+        }
     }
 }

@@ -12,13 +12,13 @@ namespace ssa::Difficulty
     inline float s_baseDmgSnapshot[8] = {};
     inline void* s_snapshotAttr = nullptr;
 
-    inline void ApplyDamageMultiplier(Game::SpyroCharacterSettings::EnemySettings& enemy)
+    inline void ApplyDamageMultiplier(Game::EnemySettings& enemy)
     {
         for (int i = 0; i < 8; i++)
             enemy.m_fBaseDamage[i] = s_baseDmgSnapshot[i] * g_config.dmgMult;
     }
 
-    inline void SnapshotAndApplyDamage(Game::SpyroCharacterSettings::EnemySettings& enemy)
+    inline void SnapshotAndApplyDamage(Game::EnemySettings& enemy)
     {
         memcpy(s_baseDmgSnapshot, enemy.m_fBaseDamage, sizeof(s_baseDmgSnapshot));
         s_snapshotAttr = enemy.m_pLevelAttribute;
@@ -48,11 +48,11 @@ namespace ssa::Difficulty
         // Per-Character writes: cover both regular enemies and boss Characters (evil Skylanders)
         // HP: hpMultiplier works for all enemies
         // Damage: attackMultiplier is a no-op for regular enemies but works for evil Skylanders
-        auto* list = Game::CharacterList::instanceAll();
+        auto* list = Game::Character::instanceCharactersList();
 
-        for (const auto* node = list->begin(); node != list->end(); node = node->next)
+        for (const auto& ref : *list)
         {
-            auto* ch = node->ptr;
+            auto* ch = ref.mPtr;
 
             if (!ch || !ch->isEnemy() || !ch->isLocalAI())
                 continue;

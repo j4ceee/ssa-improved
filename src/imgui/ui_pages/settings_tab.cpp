@@ -1,5 +1,5 @@
-#include "../ui.h"
-#include "../fonts/IconsMaterialDesign.h"
+#include "imgui/ui.h"
+#include "imgui/fonts/IconsMaterialDesign.h"
 #include <imgui.h>
 #include "config.h"
 #include "addresses.h"
@@ -25,8 +25,7 @@ namespace ssa::UIPages
                 EnableTextureMods(textureModsEnabled);
             }
             ImGui::SameLine();
-            UI::HelpMarker("Allows loading custom textures from the ssa-improved/textures/ directory.",
-                "Requires game restart");
+            UI::HelpMarker("Allows loading custom textures from the ssa-improved/textures/ directory.");
 
             if (ImGui::Button(ICON_MD_REFRESH " Reload Textures"))
             {
@@ -43,6 +42,13 @@ namespace ssa::UIPages
             ImGui::SameLine();
             UI::HelpMarker("Dumps textures to the ssa-improved/dumps/textures/ directory as they are loaded in-game.",
                 "For mod creators only, this will write lots of files!");
+
+            ImGui::Spacing();
+
+            if (ImGui::Button(ICON_MD_BUG_REPORT " Open Diagnostics Window"))
+            {
+                UI::Get()->SetDiagnosticWindowVisible(true);
+            }
         }
 
         ImGui::Spacing();

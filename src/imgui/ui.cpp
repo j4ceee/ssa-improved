@@ -9,6 +9,7 @@
 #include "imgui_impl_dx9.h"
 #include "imgui_impl_win32.h"
 #include "imgui_internal.h"
+#include "fonts/IconsMaterialDesign.h"
 #include "window/window_hooks.h"
 
 namespace ssa
@@ -230,10 +231,41 @@ void UI::Render()
         return;
     }
 
+    if (m_characterTableVisible) {
+        ImGui::Begin("Character Table", &m_characterTableVisible);
+        ImGui::PushFont(mainfont);
+
+        UIPages::RenderCharacterTable();
+
+        ImGui::PopFont();
+        ImGui::End();
+    }
+
+    if (m_targetTableVisible) {
+        ImGui::Begin("Target Table", &m_targetTableVisible);
+        ImGui::PushFont(mainfont);
+
+        UIPages::RenderTargetTable();
+
+        ImGui::PopFont();
+        ImGui::End();
+    }
+
+    if (m_diagnosticWindowVisible) {
+        ImGui::Begin(ICON_MD_BUG_REPORT " Diagnostics", &m_diagnosticWindowVisible);
+        ImGui::PushFont(mainfont);
+
+        UIPages::RenderDiagnosticWindow();
+
+        ImGui::PopFont();
+        ImGui::End();
+    }
+
+
     // --- CONTROLLER TOGGLE LOGIC ---
     // check for L3 + R3 (Left Stick Click + Right Stick Click)
     static bool s_wasComboPressed = false;
-    bool isComboPressed = ImGui::IsKeyDown(ImGuiKey_GamepadL3) && ImGui::IsKeyDown(ImGuiKey_GamepadR3);
+    const bool isComboPressed = ImGui::IsKeyDown(ImGuiKey_GamepadL3) && ImGui::IsKeyDown(ImGuiKey_GamepadR3);
 
     // only trigger once per press to prevent flickering open / closed
     if (isComboPressed && !s_wasComboPressed) {

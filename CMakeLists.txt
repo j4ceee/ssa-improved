@@ -30,6 +30,15 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
 add_subdirectory(deps/minhook)
 
 #
+# meow-hook
+#
+add_library(meow-hook INTERFACE)
+
+target_include_directories(meow-hook INTERFACE
+    deps/meow-hook/include
+)
+
+#
 # libusb
 #
 set(LIBUSB_BUILD_SHARED_LIBS OFF)
@@ -75,6 +84,7 @@ target_link_libraries(xinput1_3 PRIVATE
     setupapi    # for device enumeration if needed later
     usb-1.0
     imgui
+    meow-hook
 )
 
 if(MSVC)

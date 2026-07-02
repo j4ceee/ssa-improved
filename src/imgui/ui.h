@@ -23,13 +23,21 @@ namespace ssa
         void Shutdown();
         void Render();
 
-        bool IsVisible() const { return m_visible; }
+        [[nodiscard]] bool IsVisible() const { return m_visible; }
         void SetVisible(bool visible);
         void ToggleVisible() { SetVisible(!m_visible); }
 
-        bool IsCreatorVisible() { return m_creatorVisible; }
+        [[nodiscard]] bool IsCreatorVisible() const { return m_creatorVisible; }
         void SetCreatorVisible(bool visible) { m_creatorVisible = visible; }
         void ToggleCreatorVisible() { SetCreatorVisible(!m_creatorVisible); }
+
+        // diagnostics
+        [[nodiscard]] bool IsDiagnosticWindowVisible() const { return m_diagnosticWindowVisible; }
+        void SetDiagnosticWindowVisible(const bool visible) { m_diagnosticWindowVisible = visible; }
+        [[nodiscard]] bool IsCharacterTableVisible() const { return m_characterTableVisible; }
+        void SetCharacterTableVisible(const bool visible) { m_characterTableVisible = visible; }
+        [[nodiscard]] bool IsTargetTableVisible() const { return m_targetTableVisible; }
+        void SetTargetTableVisible(const bool visible) { m_targetTableVisible = visible; }
 
         static bool HandleHotkeyCapture(WPARAM wParam);
 
@@ -55,6 +63,11 @@ namespace ssa
         bool m_creatorVisible = false;
         bool m_initialized = false;
         ImFont* mainfont = nullptr;
+
+        // diagnostics
+        bool m_diagnosticWindowVisible = false;
+        bool m_characterTableVisible = false;
+        bool m_targetTableVisible = false;
 
         // ImGui settings handlers
         // static void* SettingsHandlerReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
@@ -157,5 +170,10 @@ namespace ssa
         void RenderPortalTab();
 
         void RenderCreator();
+
+        // Diagnostics
+        void RenderDiagnosticWindow();
+        void RenderCharacterTable();
+        void RenderTargetTable();
     }
 } // namespace ssa
