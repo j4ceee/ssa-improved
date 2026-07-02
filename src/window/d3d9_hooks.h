@@ -10,8 +10,9 @@
 #include "window_hooks.h"
 #include "texture_mods.h"
 #include "patches.h"
-#include "game/difficulty.h"
-#include "game/grassPatch.h"
+#include "game/custom/difficulty.h"
+#include "game/custom/grassPatch.h"
+#include "game/custom/skylanderSettings.h"
 
 namespace ssa::D3D9Hooks
 {
@@ -377,7 +378,8 @@ namespace ssa::D3D9Hooks
 
         // game "hooks", SecuROM is like "nuh-uh" for actual hooks, so let's modify data instead >:)
         Game::GrassPatch::ApplyGrassPatch();
-        Difficulty::Update();
+        Game::Difficulty::Update();
+        Game::SkylanderSettings::Update();
 
         return orig_Present(pDevice, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
     }

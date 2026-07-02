@@ -1,5 +1,5 @@
 #include <imgui.h>
-#include "game/difficulty.h"
+#include "../../../game/custom/difficulty.h"
 #include "game/game.h"
 #include "game/mp_game.h"
 #include "imgui/ui.h"
@@ -202,7 +202,7 @@ namespace ssa::UIPages
 
             ImGui::TextDisabled("Instance: 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(scs)));
             ImGui::TextDisabled("LevelAttr 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(enemy.m_pLevelAttribute)));
-            ImGui::TextDisabled("Snapshot 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(Difficulty::s_snapshotAttr)));
+            ImGui::TextDisabled("Snapshot 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(Game::Difficulty::s_snapshotAttr)));
 
             ImGui::Spacing();
 
@@ -226,7 +226,7 @@ namespace ssa::UIPages
                     if (levelLoaded)
                     {
                         ImGui::TableSetColumnIndex(1);
-                        ImGui::Text("%.2f", Difficulty::s_baseDmgSnapshot[i]);
+                        ImGui::Text("%.2f", Game::Difficulty::s_baseDmgSnapshot[i]);
                         ImGui::TableSetColumnIndex(2);
                         ImGui::Text("%.2f", enemy.m_fBaseDamage[i]);
                     }

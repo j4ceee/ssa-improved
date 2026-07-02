@@ -13,7 +13,8 @@
 The Emulated Portal of Power is a feature of SSA Improved that replaces the physical USB Portal of Power with a complete software simulation.
 You can place any Skylander from your library onto the portal at any time through the in-game mod UI.
 The Emulated Portal is compatible with the same Skylander dump files used by other emulators such as Cemu, RPCS3, and Dolphin.
-If you already have a collection of `.sky` or `.bin` files from those tools, they will work here without any conversion.
+If you already have a collection of `.sky` or `.bin` files from those tools, they will work here without any conversion.<br>
+You can also directly use Sidekicks, Magic Items & Adventure Packs without any requirements.
 
 > [!IMPORTANT]
 > A restart is required when toggling the emulated portal on or off. The setting takes effect the next time the game initialises its portal connection.
@@ -26,7 +27,7 @@ There are two ways to enable it:
 
 **Via the mod UI (recommended)**
 
-1. Open the mod UI with `F1` on your keyboard, or press `L3` + `R3` simultaneously on a controller
+1. Open the mod UI with `F1` on your keyboard, or press `L3` + `R3` (both sticks) simultaneously on a controller
 2. Navigate to the **Portal** tab
 3. Check **Enable Emulated Portal**
 4. Restart your game
@@ -61,14 +62,14 @@ Each slot has two buttons:
 3. Browse by element, then by character
 4. Click the Skylander you want to place and it will be assigned to the slot instantly
 
-If a file was given a nickname when it was created, the nickname is shown next to the display name, e.g. `Spyro ("My Spyro")`.
-
+- If a file was given a nickname when it was created, the nickname is shown next to the display name, e.g. `Spyro ("My Spyro")`.
+- Sidekicks, Magic Items & Adventure Packs can be used at any time and don't need to be created first
 ---
 
 ## Creating New Skylanders (Skylander Creator)
 
 To use a Skylander with the emulated portal, you need a corresponding file on disk containing that figure's data.
-You can either use dumps from a physical figure or from another emulator or create new files using the mod's built-in Skylander Creator.
+You can either use dumps from a physical figure, from emulators or create new files using the mod's built-in Skylander Creator.
 
 1. Open the mod UI (`F1` or `L3+R3`)
 2. Go to the **Portal** tab
@@ -78,12 +79,14 @@ You can either use dumps from a physical figure or from another emulator or crea
 
 The resulting file is saved into the appropriate subdirectory under `ssa-improved/skylanders/` and immediately appears in your library.
 
+Note: No files can be created for Sidekicks, Magic Items & Adventure Packs; these are directly selectable when trying to place a Skylander on the emulated Portal of Power
+
 ---
 
 ## Skylander Files
 
 The emulated portal reads Skylander data from files on disk. This is the same format used by other Skylanders emulation tools.<br>
-While playing the current state of your Skylander is continuously written back to its file, so any changes you make
+While playing, the current state of your Skylander is continuously written back to its file, so any changes you make
 to your figure (levelling up, unlocking new abilities, etc.) are saved in the Skylander file.
 
 ### File Storage

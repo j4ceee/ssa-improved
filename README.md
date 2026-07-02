@@ -5,7 +5,7 @@
   Skylanders Spyro's Adventure Improved
 </h1>
 <p align="center">
-  A mod for Skylanders Spyro's Adventure on PC that adds better support for the game on Linux and Windows
+    Comprehensive improvement mod for Skylanders: Spyro's Adventure - emulated portal, graphics enhancements, and gameplay tweaks
 </p>
 <br>
 
@@ -20,16 +20,25 @@
 ### General
 - In-game mod UI to easily change mod settings & operate the emulated portal (if enabled)
   - press `F1` on your keyboard or `L3` + `R3` on a controller (both sticks pressed simultaneously) to open the mod UI
-- Emulated Portal of Power support (allows you to use Skylanders without a physical portal, for more info see [EMULATED_PORTAL.md](https://github.com/j4ceee/ssa-improved/blob/main/EMULATED_PORTAL.md)
+- Emulated Portal of Power support (allows you to use Skylanders without a physical portal)
+  - support for Skylanders files from emulators
+  - Skylander Creator to directly create new Skylanders from within the UI
+  - directly usable Sidekicks, Magic Items & Adventure Packs
+  - for more info see [EMULATED_PORTAL.md](https://github.com/j4ceee/ssa-improved/blob/main/EMULATED_PORTAL.md)
 - Linux support for the Portal of Power
 - WinUSB support for the Portal of Power on Windows (the game can now use the same drivers as emulators like Cemu, RPCS3, ...)
+
+### Gameplay
+- HP & Damage multipliers for enemies to adjust difficulty
+- Per-player controls featuring god mode, health modifications, faction swapping, ...
+- Setting to load into any level at any time
 
 ### Graphics
 - Windowed & borderless windowed mode on Windows
 - Custom resolution support
 - VSync toggle
 - FPS cap
-- Supersampling (up to 2x) (renders the game at a higher resolution and then downscales it to the display resolution)
+- Supersampling (up to 4x) (renders the game at a higher resolution and then downscales it to the display resolution)
 - Anisotropic filtering (up to 16x)
 - Texture sharpness control
 - Grass rendering toggle (disabling grass rendering brings major performance improvements in areas with high foliage density)
@@ -47,25 +56,7 @@
      - after launching the game with the mod installed for the first time, a folder called `ssa-improved` will be created in your game directory (where `Skylanders.exe` is located)
      - inside this folder you will find a `ssa_impr_mod.ini` file
      - open this file with a text editor to configure the mod settings
-
-### Available settings
-| Setting            | Default | Description                                                                                                                                                                                                                                                                                             |
-|--------------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `Windowed`         | `1`     | set to `1` to launch the game in windowed mode, or `0` for fullscreen                                                                                                                                                                                                                                   |
-| `Borderless`       | `1`     | set to `1` to launch the game in borderless windowed mode, or `0` for normal windowed mode (requires `Windowed=1`)                                                                                                                                                                                      |
-| `ResolutionW`      | `0`     | set the horizontal resolution of the game, set to `0` to use the desktop resolution                                                                                                                                                                                                                     |
-| `ResolutionH`      | `0`     | set the vertical resolution of the game, set to `0` to use the desktop resolution                                                                                                                                                                                                                       |
-| `VSync`            | `1`     | set to `1` to enable VSync, or `0` to disable it                                                                                                                                                                                                                                                        |
-| `FpsCap`           | `0`     | set the maximum FPS the game can run at, set to `0` for unlimited FPS                                                                                                                                                                                                                                   |
-| `RenderRes`        | `1`     | allows the game to render at higher resolutions internally (set to `0` to disable)                                                                                                                                                                                                                      |
-| `Supersampling`    | `1.0`   | Multiplies the internal render resolution for improved image quality and scales the image down to your chosen / desktop resolution (requires `RenderRes=1`)<br>E.g. at `1920x1080` desktop resolution, `Supersampling=2.0` renders at `3840x2160`, meanwhile `Supersampling=1.0` renders at `1920x1080` |
-| `Anisotropy`       | `8`     | set the level of anisotropic filtering (valid values: `1` (off), `2`, `4`, `8`, `16`)                                                                                                                                                                                                                   |
-| `TextureSharpness` | `10`    | set the sharpness of textures (valid values: `0` (off) to `20` (max))                                                                                                                                                                                                                                   |
-| `DisableGrass`     | `0`     | Disabling grass rendering (value = `1`) brings major performance improvements in areas with high foliage density                                                                                                                                                                                        |
-| `EmulatedPortal`   | `0`     | Use a fully emulated portal instead of a physical USB device. When enabled (value = `1`) physical portals are ignored and Skylanders can be chosen over the in-game mod UI.                                                                                                                             |
-| `FontScale`        | `1.0`   | Scale of the font of the in-game UI (`1.0` = default size, `2.0` = double size, etc.)                                                                                                                                                                                                                   |
-| `TextureMods`      | `1`     | Set to `1` to enable loading of custom textures from the `ssa-improved/textures` folder, or `0` to disable it.                                                                                                                                                                                          |
-| `TextureDump`      | `0`     | Set to `1` to enable dumping of in-game textures to the `ssa-improved/dumps` folder, or `0` to disable it. Useful for modders for creating custom textures.                                                                                                                                             |
+- for more detailed explanations of what each setting does see [CONFIG.md](https://github.com/j4ceee/ssa-improved/blob/main/CONFIG.md)
 
 ## Installation
 

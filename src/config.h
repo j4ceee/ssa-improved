@@ -47,6 +47,17 @@ namespace ssa
         bool textureMods = true; // enable texture mods
         bool textureDump = false; // dump all in-game textures to disk (for modders)
         LogLevel logLevel = LogLevel::INFO; // log level (OFF, INFO, DEBUG, VERBOSE)
+
+
+        // session based (not saved to file) ----------------------------------------------
+
+        bool p1GodMode = false;
+        bool p1NoKnockback = false;
+        bool p1NoHitReaction = false;
+
+        bool p2GodMode = false;
+        bool p2NoKnockback = false;
+        bool p2NoHitReaction = false;
     };
 
     inline Config g_config;
@@ -141,7 +152,7 @@ namespace ssa
             L"FpsCap=%d\n"
             L"; Allows the game to render at higher resolutions internally (0 = disabled, 1 = enabled (default))\n"
             L"RenderRes=%d\n"
-            L"; Supersampling multiplier (requires RenderRes=1) (1.0 = off (default), 1.5 = 1.5x SSAA, 2.0 = 2x SSAA)\n"
+            L"; Supersampling multiplier (requires RenderRes=1) (1.0 = off (default), valid: 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0))\n"
             L"; Multiplies the internal render resolution for improved image quality and scales the image down to your chosen / desktop resolution.\n"
             L"Supersampling=%.1f\n"
             L"; Anisotropic filtering level (1 = off, valid: 1/2/4/8/16)\n"
@@ -257,7 +268,16 @@ namespace ssa
         g_config.fpsCap = getInt(L"Graphics", L"FpsCap", 0);
         g_config.renderRes = getInt(L"Graphics", L"RenderRes", 1) != 0;
 
-        g_config.ssMultiplier = std::max(1.0f, std::min(4.0f, getFloat(L"Graphics", L"Supersampling", 1.0f)));
+        float ss = getFloat(L"Graphics", L"Supersampling", 1.0);
+        // clamp to nearest valid level
+        if (ss <= 1.0f) ss = 1.0f;
+        else if (ss <= 1.5f) ss = 1.5f;
+        else if (ss <= 2.0f) ss = 2.0f;
+        else if (ss <= 2.5f) ss = 2.5f;
+        else if (ss <= 3.0f) ss = 3.0f;
+        else if (ss <= 3.5f) ss = 3.5f;
+        else ss = 4.0f;
+        g_config.ssMultiplier = ss;
 
         int anisotropy = getInt(L"Graphics", L"Anisotropy", 8);
         // clamp to nearest valid level
@@ -340,7 +360,14 @@ namespace ssa
 
     inline void SetSupersampling(float multiplier)
     {
-        g_config.ssMultiplier = std::max(1.0f, std::min(4.0f, multiplier));
+        if (multiplier <= 1.0f) multiplier = 1.0f;
+        else if (multiplier <= 1.5f) multiplier = 1.5f;
+        else if (multiplier <= 2.0f) multiplier = 2.0f;
+        else if (multiplier <= 2.5f) multiplier = 2.5f;
+        else if (multiplier <= 3.0f) multiplier = 3.0f;
+        else if (multiplier <= 3.5f) multiplier = 3.5f;
+        else multiplier = 4.0f;
+        g_config.ssMultiplier = multiplier;
         SaveConfig();
     }
 

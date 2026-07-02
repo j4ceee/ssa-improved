@@ -1,11 +1,10 @@
 #pragma once
-#include <cstring>
 
 #include "game/character.h"
 #include "config.h"
 #include "game/spyro_character_settings.h"
 
-namespace ssa::Difficulty
+namespace ssa::Game::Difficulty
 {
     // Snapshot of the values BuildSettings wrote, before we multiplied them
     // Used to re-apply the multiplier from config after a level transition or reload
@@ -28,7 +27,7 @@ namespace ssa::Difficulty
     // called from hook_Present every frame
     inline void Update()
     {
-        auto& enemy = Game::SpyroCharacterSettings::instance()->m_enemySettings;
+        auto& enemy = SpyroCharacterSettings::instance()->m_enemySettings;
 
         // Heroic challenge and XP fields seem to be set once by ReadFromLX at startup and never touched again by the game
         // -> writing every frame is safe and keeps config in sync
@@ -48,7 +47,7 @@ namespace ssa::Difficulty
         // Per-Character writes: cover both regular enemies and boss Characters (evil Skylanders)
         // HP: hpMultiplier works for all enemies
         // Damage: attackMultiplier is a no-op for regular enemies but works for evil Skylanders
-        auto* list = Game::Character::instanceCharactersList();
+        auto* list = Character::instanceCharactersList();
 
         for (const auto& ref : *list)
         {

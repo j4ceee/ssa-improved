@@ -19,7 +19,7 @@ namespace ssa::UIPages
             if (ImGui::IsItemDeactivatedAfterEdit())
                 SetEnemyHpMultiplier(g_config.hpMult);
             ImGui::SameLine();
-            UI::HelpMarker("Scales enemy HP. This multiplier is applied to the base HP values of the enemies in the current level.");
+            UI::HelpMarker("Scales enemy HP. Enemies will be tougher to defeat when this value is increased. Default = 1.0");
 
             ImGui::SliderFloat("Enemy damage multiplier", &g_config.dmgMult, 0.1f, 10.0f, "%.2fx");
             if (ImGui::IsItemDeactivatedAfterEdit())
@@ -27,7 +27,7 @@ namespace ssa::UIPages
                 SetEnemyDmgMultiplier(g_config.dmgMult);
             }
             ImGui::SameLine();
-            UI::HelpMarker("Scales enemy damage. This multiplier is applied to the base damage values of the enemies in the current level.");
+            UI::HelpMarker("Scales enemy damage. Enemies will deal more damage when this value is increased. Default = 1.0");
 
             ImGui::Spacing();
             ImGui::Spacing();
@@ -37,8 +37,7 @@ namespace ssa::UIPages
                 SetEnemyHitReaction(g_config.enemyHitReaction);
             }
             ImGui::SameLine();
-            UI::HelpMarker("Enable or disable enemy hit reaction. When enabled, enemies will react to being hit by the player. "
-                "When disabled they will still take damage but will not react to being hit, they will not be stunned and attack faster.");
+            UI::HelpMarker("Enable or disable enemy hit reaction. Disable to make enemies attack faster & not be stunned by player attacks.");
 
             ImGui::Spacing();
             ImGui::Spacing();
@@ -47,13 +46,13 @@ namespace ssa::UIPages
             if (ImGui::IsItemDeactivatedAfterEdit())
                 SetEnemyHpHeroicCeiling(g_config.heroicHpCeiling);
             ImGui::SameLine();
-            UI::HelpMarker("Maximum HP enemies can have in Heroic Challenges. If you find that enemies in challenges are too weak, try increasing this.");
+            UI::HelpMarker("Maximum HP enemies can have in Heroic Challenges. If you find that enemies in challenges are too weak, try increasing this. Default = 3.0");
 
             ImGui::SliderFloat("Heroic Challenge damage ceiling", &g_config.heroicDmgCeiling, 0.1f, 10.0f, "%.2fx");
             if (ImGui::IsItemDeactivatedAfterEdit())
                 SetEnemyDmgHeroicCeiling(g_config.heroicDmgCeiling);
             ImGui::SameLine();
-            UI::HelpMarker("Maximum damage enemies can deal in Heroic Challenges. If you find that enemies in challenges are too weak, try increasing this.");
+            UI::HelpMarker("Maximum damage enemies can deal in Heroic Challenges. If you find that enemies in challenges are too weak, try increasing this. Default = 0.1");
         }
 
         ImGui::Spacing();
@@ -67,7 +66,7 @@ namespace ssa::UIPages
             if (ImGui::IsItemDeactivatedAfterEdit())
                 SetXpMultiplier(g_config.xpMult);
             ImGui::SameLine();
-            UI::HelpMarker("Multiplies the amount of XP gained from defeating enemies");
+            UI::HelpMarker("Multiplies the amount of XP gained from defeating enemies. Default = 1.0");
         }
 
         ImGui::Spacing();
@@ -90,8 +89,10 @@ namespace ssa::UIPages
                     auto* ch = ref.mPtr;
                     if (!ch) continue;
 
+                    bool isPlayer1 = ch->isPlayer1();
+
                     ImGui::PushID(static_cast<int>(reinterpret_cast<uintptr_t>(ch)));
-                    ImGui::SeparatorText(ch->contID == 0 ? "Player 1" : "Player 2");
+                    ImGui::SeparatorText(isPlayer1 ? "Player 1" : "Player 2");
 
                     // Health slider - live write to m_fCurrHealth
                     ImGui::SliderFloat("HP", &ch->m_fCurrHealth, 0.0f, ch->maxHP(), "%.0f");
@@ -101,23 +102,17 @@ namespace ssa::UIPages
                     ImGui::Spacing();
 
                     // God mode
-                    bool godMode = ch->hasGodMode();
-                    if (ImGui::Checkbox("God mode", &godMode))
-                        ch->setGodMode(godMode);
+                    ImGui::Checkbox("God mode", isPlayer1 ? &g_config.p1GodMode : &g_config.p2GodMode);
                     ImGui::SameLine();
                     UI::HelpMarker("Makes the Skylander immune to all damage.");
 
                     // No knockback
-                    bool noKnockback = ch->hasIgnoreKnockback();
-                    if (ImGui::Checkbox("No knockback", &noKnockback))
-                        ch->setIgnoreKnockback(noKnockback);
+                    ImGui::Checkbox("No knockback", isPlayer1 ? &g_config.p1NoKnockback : &g_config.p2NoKnockback);
                     ImGui::SameLine();
                     UI::HelpMarker("Prevents the Skylander from being knocked back by attacks.");
 
                     // No hit reaction
-                    bool noHitReaction = ch->hasIgnoreHitReaction();
-                    if (ImGui::Checkbox("No hit reaction", &noHitReaction))
-                        ch->setIgnoreHitReaction(noHitReaction);
+                    ImGui::Checkbox("No hit reaction", isPlayer1 ? &g_config.p1NoHitReaction : &g_config.p2NoHitReaction);
                     ImGui::SameLine();
                     UI::HelpMarker("Prevents attack animations from being interrupted by hits.");
 
@@ -135,7 +130,7 @@ namespace ssa::UIPages
                     if (ImGui::Combo("Team", &teamIdx, kTeamLabels, 3))
                         ch->m_team = kTeamValues[teamIdx];
                     ImGui::SameLine();
-                    UI::HelpMarker("Experimental. Changing team may enable friendly fire - effect depends on targeting setup at spawn.");
+                    UI::HelpMarker("Change the faction of the Skylander. Members of the same faction cannot attack the Skylander.");
 
                     ImGui::PopID();
                     ImGui::Spacing();

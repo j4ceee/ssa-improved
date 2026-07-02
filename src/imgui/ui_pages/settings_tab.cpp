@@ -131,7 +131,7 @@ namespace ssa::UIPages
         {
             ImGui::Spacing();
 
-            UI::WarningText("These settings should be edited manually in the INI file and require an immediate game restart if changed here.", true);
+            UI::WarningText("These settings require an immediate game restart if changed here.", true);
             ImGui::Spacing();
 
             ImGui::SeparatorText("Graphics");
@@ -162,15 +162,15 @@ namespace ssa::UIPages
             // Supersampling
             ImGui::BeginDisabled(!g_config.renderRes);
             {
-                const float ssLevels[] = {1.0f, 1.5f, 2.0f, 3.0f, 4.0f};
-                const char* ssLabels[] = {"Off", "1.5x", "2x", "3x", "4x"};
+                const float ssLevels[] = {1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f, 4.0f};
+                const char* ssLabels[] = {"Off", "1.5x", "2x", "2.5x", "3x", "3.5x", "4x"};
                 int currentSsIndex = 0;
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < 7; i++)
                 {
                     if (g_config.ssMultiplier >= ssLevels[i])
                         currentSsIndex = i;
                 }
-                if (ImGui::Combo("Supersampling", &currentSsIndex, ssLabels, 5))
+                if (ImGui::Combo("Supersampling", &currentSsIndex, ssLabels, 7))
                     SetSupersampling(ssLevels[currentSsIndex]);
                 ImGui::SameLine();
                 UI::HelpMarker(
@@ -217,7 +217,7 @@ namespace ssa::UIPages
             ImGui::SameLine();
             ImGui::Text("×");
             ImGui::SameLine();
-            if (ImGui::InputInt("##resH", &resH, 0, 0))
+            if (ImGui::InputInt("Resolution##resH", &resH, 0, 0))
                 SetResolutionH(resH);
             ImGui::PopItemWidth();
             ImGui::SameLine();
