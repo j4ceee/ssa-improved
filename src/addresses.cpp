@@ -10,6 +10,7 @@ namespace ssa
         g_Address[MP_GAME] = 0x00e3d828;
         g_Address[WORLD] = 0x00E55FC0;
         g_Address[GAME] = 0x00E7B478;
+        g_Address[MAGIC_ITEM_MANAGER] = 0x00E33004;
 
         g_Address[RETRIEVE_GAME_DATA] = 0x0050e4c0;
         g_Address[CHARACTER_LIST] = 0x00ca2a54;

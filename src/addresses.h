@@ -8,6 +8,7 @@ namespace ssa
         MP_GAME,
         WORLD,
         GAME,
+        MAGIC_ITEM_MANAGER,
 
         RETRIEVE_GAME_DATA,
         CHARACTER_LIST, // Skylanders Character instances only

@@ -72,6 +72,30 @@ namespace ssa::UIPages
         ImGui::Spacing();
         ImGui::Spacing();
 
+        // Magic Items
+        // -----------------------------------------------------------------------------------------------------
+        if (ImGui::CollapsingHeader(ICON_SKY_VEHICLES " Items", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            if (ImGui::Checkbox("Infinite item duration", &g_config.infiniteItemDuration))
+            {
+                EnableInfiniteItemDuration(g_config.infiniteItemDuration);
+            }
+            ImGui::SameLine();
+            UI::HelpMarker("All normal timed magic items will stay active forever",
+                "Only affects newly placed items. Remove and re-place any currently attached magic items for the change to take effect");
+
+            if (ImGui::Checkbox("Reusable items", &g_config.reusableItems))
+            {
+                EnableReusableItems(g_config.reusableItems);
+            }
+            ImGui::SameLine();
+            UI::HelpMarker("Items can be used multiple times per level",
+                "Only affects newly placed items. Remove and re-place any currently attached magic items for the change to take effect");
+        }
+
+        ImGui::Spacing();
+        ImGui::Spacing();
+
         // Skylanders
         // -----------------------------------------------------------------------------------------------------
         if (ImGui::CollapsingHeader(ICON_SKY_MAGIC " Skylanders", ImGuiTreeNodeFlags_DefaultOpen))

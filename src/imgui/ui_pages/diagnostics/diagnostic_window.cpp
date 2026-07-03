@@ -1,6 +1,7 @@
 #include <imgui.h>
-#include "../../../game/custom/difficulty.h"
+#include "game/custom/difficulty.h"
 #include "game/game.h"
+#include "game/magic_item_manager.h"
 #include "game/mp_game.h"
 #include "imgui/ui.h"
 #include "imgui/fonts/IconsMaterialDesign.h"
@@ -103,9 +104,10 @@ namespace ssa::UIPages
     void RenderMagicItemList(const Game::Game* game)
     {
         const auto& items = game->m_GamePackage.m_MagicItems;
+        auto* mgr = Game::MagicItemManager::instance();
 
-        if (ImGui::BeginTable("##char_desc_list", 3,
-            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY))
+        if (ImGui::BeginTable("##magic_item_list", 3,
+            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
         {
             ImGui::TableSetupColumn("CRC32");
             ImGui::TableSetupColumn("Name");
@@ -116,16 +118,96 @@ namespace ssa::UIPages
             {
                 ImGui::TableNextRow();
 
+                auto* item = mgr->currItem();
+                if (item && item->m_Id == desc.m_Id)
+                {
+                    ImGui::TableSetBgColor(
+                        ImGuiTableBgTarget_RowBg0,
+                        ImGui::GetColorU32(ImVec4(0.20f, 0.55f, 0.20f, 0.35f))
+                    );
+                }
+
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("0x%08X", desc.m_Id);
 
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%s", desc.m_Name.c_str());
+                if (item && item->m_Id == desc.m_Id)
+                {
+                    ImGui::Text("%s", item->name());
+                }
+                else
+                {
+                    ImGui::Text("%s", desc.m_Name.c_str());
+                }
 
                 ImGui::TableSetColumnIndex(2);
-                ImGui::Text("%d", desc.m_Type);
+                ImGui::Text("0x%08X", desc.m_Type);
             }
             ImGui::EndTable();
+        }
+    }
+    void RenderCurrentLevelStreams(const Game::Game* game)
+    {
+        auto* currLevelDesc = game->getCurrLevelDesc();
+        if (!currLevelDesc)
+        {
+            ImGui::TextDisabled("No current level");
+            return;
+        }
+        const auto& streamFiles = currLevelDesc->m_StreamFiles;
+        const auto& stageFiles = currLevelDesc->m_StageFiles;
+
+        if (!streamFiles.empty())
+        {
+            if (ImGui::BeginTable("##stream_files", 1,
+                                  ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+            {
+                ImGui::TableSetupColumn("Name");
+                ImGui::TableHeadersRow();
+
+                for (const auto& file : streamFiles)
+                {
+                    ImGui::TableNextRow();
+
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::Text("%s", file.c_str());
+                }
+                ImGui::EndTable();
+            }
+        }
+        else if (!stageFiles.empty())
+        {
+            if (ImGui::BeginTable("##stage_files", 2,
+                                  ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+            {
+                ImGui::TableSetupColumn("Stage");
+                ImGui::TableSetupColumn("Name");
+                ImGui::TableHeadersRow();
+
+                int32_t stage = -1;
+                for (const auto& stageFile : stageFiles)
+                {
+                    for (const auto& file : stageFile.streamFiles)
+                    {
+                        ImGui::TableNextRow();
+
+                        if (stage != stageFile.state)
+                        {
+                            stage = stageFile.state;
+                            ImGui::TableSetColumnIndex(0);
+                            ImGui::Text("%d", stage);
+                        }
+
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::Text("%s", file.c_str());
+                    }
+                }
+                ImGui::EndTable();
+            }
+        }
+        else
+        {
+            ImGui::TextDisabled("No stream or stage files.");
         }
     }
 
@@ -164,6 +246,13 @@ namespace ssa::UIPages
                 ImGui::Unindent();
                 ImGui::TreePop();
             }
+            if (ImGui::TreeNode("Current Level Streams"))
+            {
+                ImGui::Indent();
+                RenderCurrentLevelStreams(game);
+                ImGui::Unindent();
+                ImGui::TreePop();
+            }
 
             ImGui::Unindent();
             ImGui::TreePop();
@@ -183,6 +272,37 @@ namespace ssa::UIPages
             }
             ImGui::SameLine();
             UI::HelpMarker("Put one player in enemy team for melee attacks to register while PvP is active");
+
+            ImGui::Unindent();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Magic Item Manager"))
+        {
+            ImGui::Indent();
+            auto* mgr = Game::MagicItemManager::instance();
+            ImGui::TextDisabled("Instance: 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(mgr)));
+            ImGui::TextDisabled("Current Item:");
+            ImGui::Indent();
+            if (auto* item = mgr->currItem())
+            {
+                ImGui::TextDisabled("Name: %s", item->name());
+                ImGui::TextDisabled("ID: 0x%08X", item->m_Id);
+                ImGui::TextDisabled("Item Type: 0x%08X", item->m_Type);
+                ImGui::TextDisabled("Lifetime: %.2f", item->m_Lifetime);
+                ImGui::TextDisabled("Timer: %.2f", item->m_Timer);
+                ImGui::TextDisabled("Time Flag: %d", item->b_TimeFlag);
+                ImGui::TextDisabled("Active: %d", item->b_Active);
+                ImGui::TextDisabled("Persist: %d", item->b_Persist);
+                ImGui::TextDisabled("Used: %d", item->b_Used);
+                ImGui::TextDisabled("Hidden: %d", item->b_Hidden);
+                ImGui::TextDisabled("Is Pet: %d", item->b_IsPet);
+            }
+            else
+            {
+                ImGui::TextDisabled("-");
+            }
+            ImGui::Unindent();
 
             ImGui::Unindent();
             ImGui::TreePop();

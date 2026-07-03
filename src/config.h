@@ -42,6 +42,10 @@ namespace ssa
         float heroicDmgCeiling = 0.1f;
         float xpMult = 1.0f;
 
+        // Magic Items
+        bool infiniteItemDuration = false;
+        bool reusableItems = false;
+
         // Mod
         float uiFontScale = 1.0f;
         bool textureMods = true; // enable texture mods
@@ -114,6 +118,8 @@ namespace ssa
         LogF("[Config] Font scale: %.1f", g_config.uiFontScale);
         LogF("[Config] Texture mods: %d", g_config.textureMods);
         LogF("[Config] Texture dump: %d", g_config.textureDump);
+        LogF("[Config] Infinite item duration: %d", g_config.infiniteItemDuration);
+        LogF("[Config] Reusable items: %d", g_config.reusableItems);
     }
 
     // -------------------------------------------------------------------------
@@ -184,6 +190,12 @@ namespace ssa
             L"; XP multiplier (0.1 = 10%% XP, 1.0 = default XP (default), 10.0 = 1000%% XP)\n"
             L"XpMult=%.2f\n"
             L"\n"
+            L"[MagicItems]\n"
+            L"; Enable infinite item duration (0 = disabled (default), 1 = enabled)\n"
+            L"InfiniteItemDuration=%d\n"
+            L"; Enable reusable items (0 = disabled (default), 1 = enabled)\n"
+            L"ReusableItems=%d\n"
+            L"\n"
             L"[Mod]\n"
             L"; Scale of the font of the in-game UI (1.0 = default size, 2.0 = double size, etc.)\n"
             L"FontScale=%.1f\n"
@@ -222,6 +234,10 @@ namespace ssa
             g_config.heroicHpCeiling,
             g_config.heroicDmgCeiling,
             g_config.xpMult,
+
+            // Magic Items
+            static_cast<int>(g_config.infiniteItemDuration),
+            static_cast<int>(g_config.reusableItems),
 
             // Mod
             g_config.uiFontScale,
@@ -307,6 +323,10 @@ namespace ssa
         g_config.heroicHpCeiling = getFloat(L"Difficulty", L"HeroicHpCeiling", 3.0f);
         g_config.heroicDmgCeiling = getFloat(L"Difficulty", L"HeroicDmgCeiling", 0.1f);
         g_config.xpMult = getFloat(L"Difficulty", L"XpMult", 1.0f);
+
+        // Magic Items
+        g_config.infiniteItemDuration = getInt(L"MagicItems", L"InfiniteItemDuration", 0) != 0;
+        g_config.reusableItems = getInt(L"MagicItems", L"ReusableItems", 0) != 0;
 
         // Mod
         float fontScale = getFloat(L"Mod", L"FontScale", 1.0f);
@@ -485,6 +505,18 @@ namespace ssa
     inline void SetXpMultiplier(float value)
     {
         g_config.xpMult = std::max(0.1f, std::min(10.0f, value));
+        SaveConfig();
+    }
+
+    inline void EnableInfiniteItemDuration(bool value)
+    {
+        g_config.infiniteItemDuration = value;
+        SaveConfig();
+    }
+
+    inline void EnableReusableItems(bool value)
+    {
+        g_config.reusableItems = value;
         SaveConfig();
     }
 } // namespace ssa

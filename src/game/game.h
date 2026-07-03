@@ -8,16 +8,24 @@
 #pragma pack(push, 1)
 namespace ssa::Game
 {
+    struct LevelStage
+    {
+        int32_t          state;         // +0x00 ruins state index (1-6, see GetSpyroRuinsState)
+        List<Ltl2String> streamFiles;   // +0x04 stream file names (append ".str" to get actual path)
+    };
+    static_assert(sizeof(LevelStage) == 16);
+
     struct LevelDesc
     {
-        uint32_t    m_Id;           // +0x00 CRC32("Level_NNN"), matches Game::m_CurrLevel
-        uint32_t    m_NextLevel;    // +0x04 CRC32 of the level that follows
-        Ltl2String  m_LevelFile;    // +0x08 e.g. "FrontEnd", "Level_Hub", "Level_001"
-        Ltl2String  m_Category;     // +0x14 e.g. "SpyroLevels", "PvP_Level"
-        float       m_fDeathHeight; // +0x20 Y below which characters respawn
-        Vec3        m_WorldMin;     // +0x24
-        Vec3        m_WorldMax;     // +0x30
-        char        _pad0[0x18];
+        uint32_t            m_Id;           // +0x00 CRC32("Level_NNN"), matches Game::m_CurrLevel
+        uint32_t            m_NextLevel;    // +0x04 CRC32 of the level that follows
+        Ltl2String          m_LevelFile;    // +0x08 e.g. "FrontEnd", "Level_Hub", "Level_001"
+        Ltl2String          m_Category;     // +0x14 e.g. "SpyroLevels", "PvP_Level"
+        float               m_fDeathHeight; // +0x20 Y below which characters respawn
+        Vec3                m_WorldMin;     // +0x24
+        Vec3                m_WorldMax;     // +0x30
+        List<Ltl2String>    m_StreamFiles;  // +0x3C music streams for non-staged levels
+        List<LevelStage>    m_StageFiles;   // +0x48 state-gated streams (ruins only; list empty for others)
     };
     static_assert(sizeof(LevelDesc) == 0x54);
     static_assert(offsetof(LevelDesc, m_Id) == 0x00);

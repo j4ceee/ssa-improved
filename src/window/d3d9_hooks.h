@@ -12,6 +12,7 @@
 #include "patches.h"
 #include "game/custom/difficulty.h"
 #include "game/custom/grassPatch.h"
+#include "game/custom/items.h"
 #include "game/custom/skylanderSettings.h"
 
 namespace ssa::D3D9Hooks
@@ -380,6 +381,7 @@ namespace ssa::D3D9Hooks
         Game::GrassPatch::ApplyGrassPatch();
         Game::Difficulty::Update();
         Game::SkylanderSettings::Update();
+        Game::ItemMods::Update();
 
         return orig_Present(pDevice, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
     }
