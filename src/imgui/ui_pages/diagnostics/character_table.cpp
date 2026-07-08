@@ -30,12 +30,12 @@ namespace ssa::UIPages
             ImGui::TableSetupColumn("Curr HP");
             ImGui::TableSetupColumn("Last damage");
             ImGui::TableSetupColumn("damageRecMask");
-            ImGui::TableSetupColumn("damageRecMaskPrev");
-            ImGui::TableSetupColumn("invulnFlags");
-            ImGui::TableSetupColumn("vulnFlags");
+            ImGui::TableSetupColumn("dRM Prev");
             ImGui::TableSetupColumn("Pad");
             ImGui::TableSetupColumn("Char Bits");
             ImGui::TableSetupColumn("Char Bits - Binary");
+            ImGui::TableSetupColumn("Physics - Send");
+            ImGui::TableSetupColumn("Physics - Receive");
             ImGui::TableHeadersRow();
 
             for (const auto& ref : *list)
@@ -107,16 +107,8 @@ namespace ssa::UIPages
                 ImGui::TableSetColumnIndex(10);
                 ImGui::Text("0x%08X", ch->damageRecMaskPrev);
 
-                // invulnFlags
-                ImGui::TableSetColumnIndex(11);
-                ImGui::Text("0x%08X", ch->invulnFlags);
-
-                // vulnFlags
-                ImGui::TableSetColumnIndex(12);
-                ImGui::Text("0x%08X", ch->vulnFlags);
-
                 // Pad
-                ImGui::TableSetColumnIndex(13);
+                ImGui::TableSetColumnIndex(11);
                 if (ch->isPlayer())
                     ImGui::Text("P");
                 else if (ch->isLocalAI())
@@ -126,13 +118,12 @@ namespace ssa::UIPages
                 else
                     ImGui::Text("-");
 
-
                 // raw hex
-                ImGui::TableSetColumnIndex(14);
+                ImGui::TableSetColumnIndex(12);
                 ImGui::Text("0x%08X", ch->charExtraBits);
 
                 // binary
-                ImGui::TableSetColumnIndex(15);
+                ImGui::TableSetColumnIndex(13);
                 {
                     char bits[33];
                     for (int b = 0; b < 32; b++)
@@ -140,6 +131,14 @@ namespace ssa::UIPages
                     bits[32] = '\0';
                     ImGui::TextDisabled("%s", bits);
                 }
+
+                // physics send
+                ImGui::TableSetColumnIndex(14);
+                ImGui::Text("0x%04X", ch->m_pMotionControl->physicsBody->maskSend);
+
+                // physics receive
+                ImGui::TableSetColumnIndex(15);
+                ImGui::Text("0x%04X", ch->m_pMotionControl->physicsBody->maskReceive);
             }
 
             ImGui::EndTable();

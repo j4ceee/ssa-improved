@@ -4,6 +4,7 @@
 #include <cstdint>
 #include "addresses.h"
 #include "data_types.h"
+#include "physics_object.h"
 
 #pragma pack(push, 1)
 namespace ssa::Game
@@ -16,6 +17,23 @@ namespace ssa::Game
         void* mCB;
     };
 
+    struct MotionControl
+    {
+        char            _pad0[0x4];     // +0x000
+        void*           m_pCurrentMode; // +0x004
+        char            _pad1[0x18];    // +0x008
+        void*           m_pObject;      // +0x020
+        char            _pad2[0x08];    // +0x024
+        PhysicsObject*  physicsBody;    // +0x02C
+        char            _pad3[0x4];     // +0x030
+
+        [[nodiscard]] PhysicsObject* physicsObject() const { return physicsBody; }
+    };
+    static_assert(sizeof(MotionControl) == 0x34);
+    static_assert(offsetof(MotionControl, m_pObject) == 0x020);
+    static_assert(offsetof(MotionControl, physicsBody) == 0x02C);
+
+
     // CRC values confirmed from Character::Init
     enum class CharacterTeam : int
     {
@@ -25,16 +43,20 @@ namespace ssa::Game
     };
 
     // charExtraBits (+0x1A8) - first word of ltl2::bitset<33,uint>
-    static constexpr uint32_t kCharBitDisableCollision = 0x04; // DisableCollision
-    static constexpr uint32_t kCharBitDisablePhysics = 0x08; // DisablePhysics
-    static constexpr uint32_t kCharBitInvincible = 0x10; // SetInvincible
+    static constexpr uint32_t kCharBitImmovable = 0x000001; // physics immovable, zeroes linear velocity
+    static constexpr uint32_t kCharBitDisableCollision = 0x000004;
+    static constexpr uint32_t kCharBitDisablePhysics = 0x000008;
+    static constexpr uint32_t kCharBitInvincible = 0x000010;
+    static constexpr uint32_t kCharBitInit = 0x000040;
+    static constexpr uint32_t kCharBitCinemaLock = 0x000200; // gates movement / anim / physics in Update
+    static constexpr uint32_t kCharBitFreeze = 0x100000; // gates Update like CinemaLock, but additionally FreezeSound + disables AnimCtrl components
 
     // charFlags (+0x1A4)
-    static constexpr uint32_t kCharFlagGhost = 0x40000; // SetGhost
+    static constexpr uint32_t kCharFlagGhost = 0x40000;
 
     // entity object flags (*m_pObject + 0x60)
-    static constexpr uint32_t kEntityFlagNoCollision = 0x02; // set by DisableCollision
-    static constexpr uint32_t kEntityFlagNoPhysics = 0x80; // set by DisablePhysics
+    static constexpr uint32_t kEntityFlagNoCollision = 0x02;
+    static constexpr uint32_t kEntityFlagNoPhysics = 0x80;
 
     struct Character
     {
@@ -54,7 +76,7 @@ namespace ssa::Game
         char            _pad4[0x004];       // +0x188
         void*           m_pPad;             // +0x18C PadController* - non-null = locally controlled
         char            _pad5a[0x008];      // +0x190
-        void*           m_pMotionControl;   // +0x198 MotionControl*, MC+0x2C → PhysicsObject*
+        MotionControl*  m_pMotionControl;   // +0x198
         char            _pad5b[0x008];      // +0x19C
         uint32_t        charFlags;          // +0x1A4 ghost: kCharFlagGhost
         uint32_t        charExtraBits;      // +0x1A8 invincible/physics/collision bits
@@ -90,11 +112,10 @@ namespace ssa::Game
             return reinterpret_cast<List<CharacterRef>*>(GetAddress(CHARACTER_LIST_ALL));
         }
 
-        [[nodiscard]] uint8_t* physicsBody() const
+        [[nodiscard]] PhysicsObject* physicsBody() const
         {
             if (!m_pMotionControl) return nullptr;
-            return *reinterpret_cast<uint8_t**>(
-                static_cast<uint8_t*>(m_pMotionControl) + 0x2C);
+            return m_pMotionControl->physicsObject();
         }
 
         [[nodiscard]] bool hasGodMode() const { return (charExtraBits & kCharBitInvincible) != 0; }
@@ -115,6 +136,16 @@ namespace ssa::Game
 
         void setIgnoreHitReaction(const bool enable) { ignoreHitReaction = enable ? 1 : 0; }
 
+        [[nodiscard]] bool hasCinemaLock() const { return (charExtraBits & kCharBitCinemaLock) != 0; }
+
+        void setCinemaLock(const bool enable)
+        {
+            if (enable)
+                charExtraBits |= kCharBitCinemaLock;
+            else
+                charExtraBits &= ~kCharBitCinemaLock;
+        }
+        
         [[nodiscard]] bool hasDisableCollision() const { return (charExtraBits & kCharBitDisableCollision) != 0; }
 
         void setDisableCollision(const bool enable)

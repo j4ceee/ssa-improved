@@ -12,11 +12,13 @@ namespace ssa
         g_Address[GAME] = 0x00E7B478;
         g_Address[MAGIC_ITEM_MANAGER] = 0x00E33004;
 
+        g_Address[DEBUG_CAM_UPDATE] = 0x008b0f70;
         g_Address[RETRIEVE_GAME_DATA] = 0x0050e4c0;
         g_Address[CHARACTER_LIST] = 0x00ca2a54;
         g_Address[CHARACTER_LIST_ALL] = 0x00ca2a48;
         g_Address[TARGETING_LIST] = 0x00e3ddf0;
         g_Address[GRASS_COUNT] = 0x00d9146c; // number of grass patches to draw (probably / maybe?)
+        g_Address[DEFAULT_FOV] = 0x00cbc7f0; // default field of view (used for active camera)
 
         g_Address[MOUSE_DEVICE] = 0x00ca29e0; // DirectInput mouse device pointer
         // VTables

@@ -3,6 +3,7 @@
 #include "game/game.h"
 #include "game/magic_item_manager.h"
 #include "game/mp_game.h"
+#include "game/world.h"
 #include "imgui/ui.h"
 #include "imgui/fonts/IconsMaterialDesign.h"
 #include "window/texture_mods.h"
@@ -252,6 +253,43 @@ namespace ssa::UIPages
                 RenderCurrentLevelStreams(game);
                 ImGui::Unindent();
                 ImGui::TreePop();
+            }
+
+            ImGui::Unindent();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("World"))
+        {
+            ImGui::Indent();
+            auto* world = Game::World::instance();
+            ImGui::TextDisabled("Instance: 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(world)));
+            ImGui::TextDisabled("Time: %.4f", world->time);
+            ImGui::TextDisabled("Update Speed: %.4f", world->updateSpd);
+            ImGui::TextDisabled("Playback Ratio: %.1f", world->playbackRatioNew);
+            ImGui::TextDisabled("Frame Corrector: %.4f", world->frameCorrector);
+
+            ImGui::TextDisabled("Active Views: 0x%08X", world->cameraSet.activeViews);
+            ImGui::TextDisabled("Max Views: 0x%08X", world->cameraSet.maxViews);
+            ImGui::TextDisabled("Primary CameraViewInterface:");
+            if (auto* gv = world->cameraSet.primaryInterface())
+            {
+                ImGui::Indent();
+                ImGui::TextDisabled("Instance: 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(gv)));
+                ImGui::TextDisabled("FOV: %.4f", gv->fov);
+                ImGui::TextDisabled("Near Plane: %.4f", gv->nearPlane);
+                ImGui::TextDisabled("Far Plane: %.4f", gv->farPlane);
+                ImGui::TextDisabled("cameraMat pos: (%.1f, %.1f, %.1f)", gv->cameraMat.w.x, gv->cameraMat.w.y, gv->cameraMat.w.z);
+                ImGui::TextDisabled("viewMat pos:   (%.1f, %.1f, %.1f)", gv->viewMat.w.x, gv->viewMat.w.y, gv->viewMat.w.z);
+                ImGui::TextDisabled("invView pos:   (%.1f, %.1f, %.1f)", gv->invView.w.x, gv->invView.w.y, gv->invView.w.z);
+
+                ImGui::TextDisabled("Camera Instance:");
+                    ImGui::Indent();
+                        auto* cameraInstance = gv->m_pCamera;
+                        ImGui::TextDisabled("Instance: 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(cameraInstance)));
+                        ImGui::TextDisabled("FOV: %.4f", cameraInstance->m_FOV);
+                    ImGui::Unindent();
+                ImGui::Unindent();
             }
 
             ImGui::Unindent();

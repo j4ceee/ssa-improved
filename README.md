@@ -30,8 +30,11 @@
 
 ### Gameplay
 - HP & Damage multipliers for enemies to adjust difficulty
-- Per-player controls featuring god mode, health modifications, faction swapping, ...
+- Multiplier for experience gained from defeating enemies
+- Per-player controls featuring god mode, health modifications, faction swapping and more
 - Setting to load into any level at any time
+- Reusable Magic Items & infinite duration for Magic Items
+- Free cam
 
 ### Graphics
 - Windowed & borderless windowed mode on Windows

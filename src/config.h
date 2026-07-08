@@ -4,6 +4,7 @@
 #include <string>
 #include <imgui.h>
 #include "log.h"
+#include "game/camera.h"
 
 namespace ssa
 {
@@ -54,6 +55,8 @@ namespace ssa
 
 
         // session based (not saved to file) ----------------------------------------------
+
+        int freeCamFov = static_cast<int>(Game::kDefaultFOV);
 
         bool p1GodMode = false;
         bool p1NoKnockback = false;

@@ -4,6 +4,7 @@
 #include "config.h"
 #include "game/character.h"
 #include "game/game.h"
+#include "game/custom/free_cam.h"
 #include "imgui/fonts/IconsSkylanders.h"
 
 namespace ssa::UIPages
@@ -67,6 +68,27 @@ namespace ssa::UIPages
                 SetXpMultiplier(g_config.xpMult);
             ImGui::SameLine();
             UI::HelpMarker("Multiplies the amount of XP gained from defeating enemies. Default = 1.0");
+        }
+
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        // Camera
+        // -----------------------------------------------------------------------------------------------------
+        if (ImGui::CollapsingHeader(ICON_MD_CAMERA " Camera", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            if (ImGui::Button(Game::FreeCam::IsActive() ? "Exit Free Cam" : "Free Cam"))
+                Game::FreeCam::Toggle();
+            ImGui::SameLine();
+            UI::HelpMarker("Toggles free camera mode. Allows you to move the camera freely around the scene.",
+                "Warning: You can use this without restrictions, but beware that the game may crash if you use free cam during camera transitions "
+                "(e.g. when the game switches from normal gameplay into a cutscene).\n"
+                "To be safe, only use free cam during normal gameplay (where the camera follows your Skylander) "
+                "and exit it before state changes (like level changes, entering a cutscene, entering Magic Moment).");
+
+            ImGui::SliderInt("Free Cam FOV", &g_config.freeCamFov, 1, 179, "%d°");
+            ImGui::SameLine();
+            UI::HelpMarker("Field of view (in degrees) of the free cam. Default = 53");
         }
 
         ImGui::Spacing();

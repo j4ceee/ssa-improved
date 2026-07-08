@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 
 // Ltl2String ----------------------------------------------------------------------------------------------------------
 struct Ltl2String
@@ -29,6 +30,32 @@ struct Vec3
     Vec3& operator-=(const Vec3& o) { x-=o.x; y-=o.y; z-=o.z; return *this; }
 };
 static_assert(sizeof(Vec3) == 12);
+
+// RotTransMat4x3FP ----------------------------------------------------------------------------------------------------
+struct RotTransMat4x3FP
+{
+    Vec3 x; // right
+    Vec3 y; // up
+    Vec3 z; // forward
+    Vec3 w; // position
+
+    [[nodiscard]] float lengthSqX() const { return x.x*x.x + x.y*x.y + x.z*x.z; }
+    [[nodiscard]] float lengthSqY() const { return y.x*y.x + y.y*y.y + y.z*y.z; }
+    [[nodiscard]] float lengthSqZ() const { return z.x*z.x + z.y*z.y + z.z*z.z; }
+
+    // true when all three direction vectors are approximately unit length
+    [[nodiscard]] bool isOrthonormal(float tolerance = 0.05f) const
+    {
+        auto near1 = [tolerance](float v) { return v > (1.0f - tolerance) && v < (1.0f + tolerance); };
+        return near1(lengthSqX()) && near1(lengthSqY()) && near1(lengthSqZ());
+    }
+};
+static_assert(sizeof(RotTransMat4x3FP) == 48);
+static_assert(offsetof(RotTransMat4x3FP, x) == 0x00);
+static_assert(offsetof(RotTransMat4x3FP, y) == 0x0C);
+static_assert(offsetof(RotTransMat4x3FP, z) == 0x18);
+static_assert(offsetof(RotTransMat4x3FP, w) == 0x24);
+
 
 
 // List ----------------------------------------------------------------------------------------------------------------

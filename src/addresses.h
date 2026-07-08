@@ -10,11 +10,13 @@ namespace ssa
         GAME,
         MAGIC_ITEM_MANAGER,
 
+        DEBUG_CAM_UPDATE,
         RETRIEVE_GAME_DATA,
         CHARACTER_LIST, // Skylanders Character instances only
         CHARACTER_LIST_ALL, // all Character instances (enemies + players + neutral)
         TARGETING_LIST,
         GRASS_COUNT,
+        DEFAULT_FOV,
 
         MOUSE_DEVICE,
         // VTables
