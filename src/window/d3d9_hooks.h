@@ -198,7 +198,7 @@ namespace ssa::D3D9Hooks
     }
 
     // -------------------------------------------------------------------------
-    // Hook: CreateTexture - scale internal scene RTs to backbuffer size
+    // Hook: CreateTexture - scale internal scene RTs to backbuffer size & clear texture replacement pointers
     // -------------------------------------------------------------------------
     inline HRESULT WINAPI hook_CreateTexture(
         IDirect3DDevice9* pDevice, UINT Width, UINT Height, UINT Levels,
@@ -208,7 +208,12 @@ namespace ssa::D3D9Hooks
         if ((Usage & D3DUSAGE_RENDERTARGET) && g_config.renderRes && g_bbWidth > 0 && g_bbHeight > 0)
             TryScaleDimensions(Width, Height);
 
-        return orig_CreateTexture(pDevice, Width, Height, Levels, Usage, Format, Pool, ppTexture, pSharedHandle);
+        HRESULT hr = orig_CreateTexture(pDevice, Width, Height, Levels, Usage, Format, Pool, ppTexture, pSharedHandle);
+
+        if (SUCCEEDED(hr) && ppTexture && *ppTexture)
+            TextureMods::g_ptrToHash.erase(*ppTexture); // evict any stale entry at this address
+
+        return hr;
     }
 
     // -------------------------------------------------------------------------
@@ -260,7 +265,7 @@ namespace ssa::D3D9Hooks
     }
 
     // -------------------------------------------------------------------------
-    // Hook: SetTexture
+    // Hook: SetTexture - handle texture replacement
     // -------------------------------------------------------------------------
     inline HRESULT WINAPI hook_SetTexture(IDirect3DDevice9* pDevice, DWORD Stage, IDirect3DBaseTexture9* pTex)
     {

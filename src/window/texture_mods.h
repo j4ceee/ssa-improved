@@ -5,12 +5,12 @@
 #include <unordered_set>
 #include <filesystem>
 #include <cstdint>
-#include <algorithm>
 
 #include "DDSTextureLoader9.h"
 #include "ScreenGrab9.h"
 #include "config.h"
 #include "log.h"
+#include "texture_format_utils.h"
 
 namespace ssa::TextureMods
 {
@@ -55,12 +55,11 @@ namespace ssa::TextureMods
      * @param len
      * @return
      */
-    inline uint64_t FNV1a64(const uint8_t* data, size_t len)
+    inline uint64_t FNV1a64(const uint8_t* data, size_t len, uint64_t h = 14695981039346656037ull)
     {
-        uint64_t h = 14695981039346656037ull;
         for (size_t i = 0; i < len; ++i)
             h = (h ^ data[i]) * 1099511628211ull;
-        return h != 0 ? h : 1ull;
+        return h;
     }
 
     /**
@@ -106,27 +105,23 @@ namespace ssa::TextureMods
         if (FAILED(pTex->LockRect(0, &lr, nullptr, D3DLOCK_READONLY)))
             return 0; // failed to lock, skip this texture
 
-        // for DXT: Pitch = bytes per row of 4x4 blocks; block rows = ceil(H/4).
-        // or uncompressed: total data = Pitch x Height.
-        bool isBC = (desc.Format == D3DFMT_DXT1 || desc.Format == D3DFMT_DXT2 ||
-            desc.Format == D3DFMT_DXT3 || desc.Format == D3DFMT_DXT4 ||
-            desc.Format == D3DFMT_DXT5);
-
-        size_t dataBytes;
-        if (isBC)
+        size_t rowBytes = 0, numRows = 0;
+        if (FAILED(TextureFormat::GetSurfaceInfo(desc.Width, desc.Height, desc.Format, nullptr, &rowBytes, &numRows)))
         {
-            UINT blockRows = std::max(1u, (desc.Height + 3u) / 4u);
-            dataBytes = static_cast<size_t>(lr.Pitch) * blockRows;
-        }
-        else
-        {
-            dataBytes = static_cast<size_t>(lr.Pitch) * desc.Height;
+            pTex->UnlockRect(0);
+            return 0;
         }
 
-        uint64_t hash = FNV1a64(static_cast<const uint8_t*>(lr.pBits), dataBytes);
+        uint64_t h = 14695981039346656037ull;
+        const auto* pRow = static_cast<const uint8_t*>(lr.pBits);
+        for (size_t row = 0; row < numRows; ++row)
+        {
+            h = FNV1a64(pRow, rowBytes, h);
+            pRow += lr.Pitch;
+        }
+
         pTex->UnlockRect(0);
-
-        return hash;
+        return h != 0 ? h : 1ull;
     }
 
     /**
@@ -175,6 +170,9 @@ namespace ssa::TextureMods
      */
     inline void Load(IDirect3DDevice9* pDevice)
     {
+        if (!g_config.textureMods) // early return before setting g_loaded
+            return;
+
         g_loaded = true;
 
         std::wstring texDir = GetTexturesDir();
