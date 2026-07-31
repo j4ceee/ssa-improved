@@ -58,6 +58,8 @@ namespace ssa
 
         int freeCamFov = static_cast<int>(Game::kDefaultFOV);
 
+        bool textureCycler = false;
+
         bool p1GodMode = false;
         bool p1NoKnockback = false;
         bool p1NoHitReaction = false;

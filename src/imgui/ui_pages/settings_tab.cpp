@@ -43,6 +43,11 @@ namespace ssa::UIPages
             UI::HelpMarker("Dumps textures to the ssa-improved/dumps/textures/ directory as they are loaded in-game.",
                 "For mod creators only, this will write lots of files!");
 
+            ImGui::Checkbox("Texture Cycler", &g_config.textureCycler);
+            ImGui::SameLine();
+            UI::HelpMarker("Alternative to dumping all encountered textures. Allows you to cycle through each texture in the current scene "
+                "with 'Page Up' / 'Page Down' and dump the selected texture ('F9').");
+
             ImGui::Spacing();
 
             if (ImGui::Button(ICON_MD_BUG_REPORT " Open Diagnostics Window"))

@@ -269,7 +269,7 @@ namespace ssa::D3D9Hooks
     // -------------------------------------------------------------------------
     inline HRESULT WINAPI hook_SetTexture(IDirect3DDevice9* pDevice, DWORD Stage, IDirect3DBaseTexture9* pTex)
     {
-        if (pTex && (g_config.textureMods || g_config.textureDump))
+        if (pTex && (g_config.textureMods || g_config.textureDump || g_config.textureCycler))
         {
             pTex = TextureMods::HandleSetTexture(pDevice, Stage, pTex);
         }
@@ -376,8 +376,26 @@ namespace ssa::D3D9Hooks
             TextureMods::Reload(pDevice);
         }
 
-        if ((g_config.textureMods || g_config.textureDump) && !TextureMods::g_loaded)
+        if ((g_config.textureMods || g_config.textureDump || g_config.textureCycler) && !TextureMods::g_loaded)
             TextureMods::Load(pDevice);
+
+        if (g_config.textureCycler)
+        {
+            static bool s_prevPgUp = false, s_prevPgDn = false, s_prevDump = false;
+            const bool pgUp = (GetAsyncKeyState(VK_PRIOR) & 0x8000) != 0;
+            const bool pgDn = (GetAsyncKeyState(VK_NEXT) & 0x8000) != 0;
+            const bool dump = (GetAsyncKeyState(VK_F9) & 0x8000) != 0;
+
+            if (pgUp && !s_prevPgUp) TextureMods::SelectPrev();
+            if (pgDn && !s_prevPgDn) TextureMods::SelectNext();
+            if (dump && !s_prevDump) TextureMods::DumpSelected();
+
+            s_prevPgUp = pgUp;
+            s_prevPgDn = pgDn;
+            s_prevDump = dump;
+
+            TextureMods::ClearFrameList(); // clear AFTER hotkeys so keys see the current frame's list
+        }
 
         // initialize game hooks on first rendered frame (to bypass SecuROM)
         if (!g_deferredHooksActive)
