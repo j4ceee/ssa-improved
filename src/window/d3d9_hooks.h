@@ -14,6 +14,7 @@
 #include "game/custom/free_cam.h"
 #include "game/custom/grassPatch.h"
 #include "game/custom/items.h"
+#include "game/custom/load_screen.h"
 #include "game/custom/skylanderSettings.h"
 
 namespace ssa::D3D9Hooks
@@ -54,6 +55,7 @@ namespace ssa::D3D9Hooks
     inline UINT g_bbWidth = 0;
     inline UINT g_bbHeight = 0;
     inline IDirect3DDevice9* g_d3dDevice = nullptr;
+    inline DWORD g_mainThreadId = 0;
 
     // internal resolution the game uses for its 3D scene pipeline
     static constexpr UINT k_internalW = 1120;
@@ -327,6 +329,13 @@ namespace ssa::D3D9Hooks
             s_windowSetup = (WindowHooks::g_hGameWindow != nullptr);
         }
 
+        // LoadScreen runs on its own thread (Update/Draw/Sleep(29)) while the main thread loads
+        // -> feed its stale frameCorrector real time, and skip limiter + game writes (main thread is mid-load)
+        if (g_mainThreadId && GetCurrentThreadId() != g_mainThreadId) {
+            Game::LoadScreenFix::Update();
+            return orig_Present(pDevice, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
+        }
+
         // skip limiter if vsync is on & cap is at or above the refresh rate (vsync already does the job in that case)
         bool limiterRedundant = g_config.vsync && g_displayRefreshHz > 0 && g_config.fpsCap >= g_displayRefreshHz;
 
@@ -482,8 +491,7 @@ namespace ssa::D3D9Hooks
     // -------------------------------------------------------------------------
     // Hook: CreateDevice - override params, then hook the returned device vtable
     // -------------------------------------------------------------------------
-    inline HRESULT WINAPI hook_CreateDevice(
-        IDirect3D9* pD3D, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow,
+    inline HRESULT WINAPI hook_CreateDevice(IDirect3D9* pD3D, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow,
         DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pp, IDirect3DDevice9** ppDevice)
     {
         ApplyPresentParams(pp);
@@ -498,6 +506,12 @@ namespace ssa::D3D9Hooks
                     g_displayRefreshHz = (int)mode.RefreshRate;
                     Log("[D3D9] Display refresh rate detected: %d Hz", g_displayRefreshHz);
                 }
+            }
+
+            // save main thread id for load screen fixes
+            if (!g_mainThreadId) {
+                g_mainThreadId = GetCurrentThreadId();
+                Log("[D3D9] Main render thread: %lu", g_mainThreadId);
             }
 
             static bool s_device_hooked = false;
