@@ -9,6 +9,7 @@ namespace ssa
         WORLD,
         GAME,
         MAGIC_ITEM_MANAGER,
+        CINEMA_TRIGGER_LIST,
 
         DEBUG_CAM_UPDATE,
         RETRIEVE_GAME_DATA,

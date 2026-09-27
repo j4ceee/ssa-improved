@@ -10,6 +10,7 @@
 #include "window_hooks.h"
 #include "texture_mods.h"
 #include "patches.h"
+#include "game/custom/cinema_skip.h"
 #include "game/custom/difficulty.h"
 #include "game/custom/free_cam.h"
 #include "game/custom/grassPatch.h"
@@ -413,6 +414,7 @@ namespace ssa::D3D9Hooks
         // game "hooks", SecuROM is like "nuh-uh" for actual hooks, so let's modify data instead >:)
         Game::GrassPatch::ApplyGrassPatch();
         Game::Difficulty::Update();
+        Game::CinemaSkip::Update();
         Game::SkylanderSettings::Update();
         Game::ItemMods::Update();
         Game::FreeCam::Update();
