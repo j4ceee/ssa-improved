@@ -274,6 +274,16 @@ namespace ssa::UIPages
             {
                 ImGui::TextDisabled("Current Level: -");
             }
+
+            ImGui::Spacing();
+
+            if (ImGui::Checkbox("Remove player-only invisible walls", &g_config.removePlayerBlockers))
+            {
+                SetRemovePlayerBlockers(g_config.removePlayerBlockers);
+            }
+            ImGui::SameLine();
+            UI::HelpMarker("Removes invisible walls that only block Skylanders. Floors, regular walls and other invisible walls are unaffected.",
+                "This can let you reach areas the level wasn't designed for. If you get stuck or fall out of the level, turn this off.");
         }
     }
 }

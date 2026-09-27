@@ -6,6 +6,8 @@
 #pragma pack(push, 1)
 namespace ssa::Game
 {
+    static constexpr uint16_t kColLayerPlayerBlocker = 0x0040; // player-only invisible walls
+
     struct PhysicsObject
     {
         char        _pad0[0x9C];            // +0x000

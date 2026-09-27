@@ -1,0 +1,8 @@
+//
+// Created by jance on 27.09.2026.
+//
+
+#ifndef SSA_IMPROVED_LOAD_SCREEN_H
+#define SSA_IMPROVED_LOAD_SCREEN_H
+
+#endif //SSA_IMPROVED_LOAD_SCREEN_H
