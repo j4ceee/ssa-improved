@@ -73,6 +73,7 @@ namespace ssa
         // static void* SettingsHandlerReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
         // static void SettingsHandlerReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line);
         // static void SettingsHandlerWriteAll(ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf);
+        static void RenderHelpMarkerButton();
 
         static std::string GetKeyName(int vkCode)
         {

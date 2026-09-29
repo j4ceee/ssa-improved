@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(ssa-improved)
+project(ssa-improved VERSION 1.4.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,6 +23,9 @@ endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/${CMAKE_BUILD_TYPE})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/${CMAKE_BUILD_TYPE})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in ${CMAKE_CURRENT_BINARY_DIR}/generated/version.h @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/resource.rc.in ${CMAKE_CURRENT_BINARY_DIR}/generated/resource.rc @ONLY)
 
 #
 # MinHook
@@ -76,6 +79,7 @@ target_sources(xinput1_3 PRIVATE
     src/xinput1_3.def
     deps/directxtex/DDSTextureLoader/DDSTextureLoader9.cpp
     deps/directxtex/ScreenGrab/ScreenGrab9.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/resource.rc
 )
 
 target_link_libraries(xinput1_3 PRIVATE

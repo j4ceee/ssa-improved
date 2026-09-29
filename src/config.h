@@ -35,6 +35,8 @@ namespace ssa
         bool emulatedPortal = false; // if true, the physical portal is ignored and all portal interactions are emulated in software (see portal/backend/EmulatedBackend.h)
         bool emulatedPortalStartup = false; // value of emulated portal during startup (should be used everywhere where emulated portal needs to be checked)
         bool removePlayerBlockers = true; // strip the player-only invisible wall collision layer from local players
+        bool jumpEnabled = true;
+        int jumpHeight = 3;
 
         // Difficulty
         float hpMult = 1.0f;
@@ -122,6 +124,8 @@ namespace ssa
         LogF("[Config] XP multiplier: %.2f", g_config.xpMult);
         LogF("[Config] Emulated portal: %d", g_config.emulatedPortal);
         LogF("[Config] Remove player blockers: %d", g_config.removePlayerBlockers);
+        LogF("[Config] Jump enabled: %d", g_config.jumpEnabled);
+        LogF("[Config] Jump height: %d", g_config.jumpHeight);
         LogF("[Config] Font scale: %.1f", g_config.uiFontScale);
         LogF("[Config] Texture mods: %d", g_config.textureMods);
         LogF("[Config] Texture dump: %d", g_config.textureDump);
@@ -184,6 +188,10 @@ namespace ssa
             L"EmulatedPortal=%d\n"
             L"; Remove invisible walls that only block Skylanders (0 = disabled, 1 = enabled (default))\n"
             L"RemovePlayerBlockers=%d\n"
+            L"; Enable jumping (0 = disabled, 1 = enabled (default))\n"
+            L"Jumping=%d\n"
+            L"; Jump height (2 = default)\n"
+            L"JumpHeight=%d\n"
             L"\n"
             L"[Difficulty]\n"
             L"; Base HP multiplier for enemies (0.1 = 10%% HP, 1.0 = default HP (default), 10.0 = 1000%% HP)\n"
@@ -236,6 +244,8 @@ namespace ssa
             // Game
             static_cast<int>(g_config.emulatedPortal),
             static_cast<int>(g_config.removePlayerBlockers),
+            static_cast<int>(g_config.jumpEnabled),
+            g_config.jumpHeight,
 
             // Difficulty
             g_config.hpMult,
@@ -326,7 +336,8 @@ namespace ssa
         g_config.emulatedPortal = getInt(L"Game", L"EmulatedPortal", 0) != 0;
         g_config.emulatedPortalStartup = g_config.emulatedPortal; // cache initial value
         g_config.removePlayerBlockers = getInt(L"Game", L"RemovePlayerBlockers", 1) != 0;
-
+        g_config.jumpEnabled = getInt(L"Game", L"Jumping", 1) != 0;
+        g_config.jumpHeight = getInt(L"Game", L"JumpHeight", 3);
         // Difficulty
         g_config.hpMult = getFloat(L"Difficulty", L"HpMult", 1.0f);
         g_config.dmgMult = getFloat(L"Difficulty", L"DmgMult", 1.0f);
@@ -467,6 +478,18 @@ namespace ssa
     inline void SetRemovePlayerBlockers(bool value)
     {
         g_config.removePlayerBlockers = value;
+        SaveConfig();
+    }
+
+    inline void EnableJumping(bool value)
+    {
+        g_config.jumpEnabled = value;
+        SaveConfig();
+    }
+
+    inline void SetJumpHeight(int value)
+    {
+        g_config.jumpHeight = std::max(0, std::min(40, value));
         SaveConfig();
     }
 

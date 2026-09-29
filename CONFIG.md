@@ -14,6 +14,7 @@
 - [Game settings](#game-settings)
   - [Emulated Portal](#emulatedportal)
   - [Level loading](#levelloading)
+  - [Remove player-only invisible walls](#playerblockers)
 - [Difficulty](#difficulty)
   - [Enemy HP multiplier](#hpmult)
   - [Enemy damage multiplier](#dmgmult)
@@ -27,6 +28,9 @@
 - [Magic item settings](#magic-item-settings)
   - [Infinite item duration](#infitems)
   - [Reusable items](#reuseitems)
+- [Skylander settings](#skylander-settings)
+  - [Jumping](#jumping)
+  - [Jump height](#jumpheight)
 - [Skylander player settings](#skylander-player-settings)
   - [HP](#hp)
   - [God mode](#god)
@@ -58,10 +62,11 @@
 
 ## Game settings
 
-| Setting                                                                   | UI Location                         | Description                                                                                                                                                             | Default        | Config                                     |
-|---------------------------------------------------------------------------|-------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------|--------------------------------------------|
-| <h4><a id="emulatedportal" name="emulatedportal"></a>Emulated Portal</h4> | `Portal` → `Enable Emulated Portal` | Enables the emulated Portal of Power.<br>For a more detailed description see [EMULATED_PORTAL.md](https://github.com/j4ceee/ssa-improved/blob/main/EMULATED_PORTAL.md). | Disabled (`0`) | Key: `EmulatedPortal`<br>Values: `0` / `1` |
-| <h4><a id="levelloading" name="levelloading"></a>Level loading</h4>       | `Game` → `Level`                    | Directly load into any challenge or campaign level.<br>Select a level from the dropdown & hit `Load`.                                                                   | -              | -                                          |
+| Setting                                                                                      | UI Location                                             | Description                                                                                                                                                                                                                                         | Default        | Config                                           |
+|----------------------------------------------------------------------------------------------|---------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------|--------------------------------------------------|
+| <h4><a id="emulatedportal" name="emulatedportal"></a>Emulated Portal</h4>                    | `Portal` → `Enable Emulated Portal`                     | Enables the emulated Portal of Power.<br>For a more detailed description see [EMULATED_PORTAL.md](https://github.com/j4ceee/ssa-improved/blob/main/EMULATED_PORTAL.md).                                                                             | Disabled (`0`) | Key: `EmulatedPortal`<br>Values: `0` / `1`       |
+| <h4><a id="levelloading" name="levelloading"></a>Level loading</h4>                          | `Game` → `Level`                                        | Directly load into any challenge or campaign level.<br>Select a level from the dropdown & hit `Load`.                                                                                                                                               | -              | -                                                |
+| <h4><a id="playerblockers" name="playerblockers"></a>Remove player-only invisible walls</h4> | `Game` → `Level` → `Remove player-only invisible walls` | Removes invisible walls that only block Skylanders. Floors, regular walls, and other invisible walls remain solid.<br>_Note: This can allow access to areas the level was not designed for. Turn it off if you get stuck or fall out of the level._ | Enabled (`1`)  | Key: `RemovePlayerBlockers`<br>Values: `0` / `1` |
 
 ## Difficulty
 
@@ -87,6 +92,13 @@
 |----------------------------------------------------------------------|---------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------|--------------------------------------------------|
 | <h4><a id="infitems" name="infitems"></a>Infinite item duration</h4> | `Game` → `Items` → `Infinite item duration` | All normal timed magic items will stay active forever.<br>_Note: Only affects newly placed items. Remove and re-place any currently attached magic items for the change to take effect_ | Disabled (`0`) | Key: `InfiniteItemDuration`<br>Values: `0` / `1` |
 | <h4><a id="reuseitems" name="reuseitems"></a>Reusable items</h4>     | `Game` → `Items` → `Reusable items`         | Items can be used multiple times per level.<br>_Note: Only affects newly placed items. Remove and re-place any currently attached magic items for the change to take effect_            | Disabled (`0`) | Key: `ReusableItems`<br>Values: `0` / `1`        |
+
+## Skylander settings
+
+| Setting                                                       | UI Location                              | Description                                                                                                                 | Default       | Config                                  |
+|---------------------------------------------------------------|------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|---------------|-----------------------------------------|
+| <h4><a id="jumping" name="jumping"></a>Jumping</h4>           | `Game` → `Skylanders` → `Enable Jumping` | Allows each player to jump by pressing the left stick on their controller. Jumping is unavailable while the mod UI is open. | Enabled (`1`) | Key: `Jumping`<br>Values: `0` / `1`     |
+| <h4><a id="jumpheight" name="jumpheight"></a>Jump height</h4> | `Game` → `Skylanders` → `Jump Height`    | Adjusts how high Skylanders jump.                                                                                           | `3`           | Key: `JumpHeight`<br>Values: `0` - `40` |
 
 ## Skylander player settings
 _Note: These settings can be changed in the current play session. Each player has their own settings_.

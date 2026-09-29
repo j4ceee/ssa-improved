@@ -329,12 +329,8 @@ void UI::Render()
 // Helper functions
 void UI::HelpMarker(const char* desc, const char* warning)
 {
-    if (ImGui::BeginItemTooltip())
-    {
-        InfoText(desc, warning);
-        ImGui::EndTooltip();
-    }
-    ImGui::TextDisabled("(?)");
+    RenderHelpMarkerButton();
+
     if (ImGui::BeginItemTooltip())
     {
         InfoText(desc, warning);
@@ -344,12 +340,35 @@ void UI::HelpMarker(const char* desc, const char* warning)
 // help marker with array of bullet points for warning
 void UI::HelpMarker(const char* desc, const std::vector<const char*>& warnings)
 {
-    ImGui::TextDisabled("(?)");
+    RenderHelpMarkerButton();
+
     if (ImGui::BeginItemTooltip())
     {
         InfoText(desc, warnings);
         ImGui::EndTooltip();
     }
+}
+
+void UI::RenderHelpMarkerButton()
+{
+    static int s_counter = 0;
+    static int s_lastFrame = -1;
+
+    if (const int frame = ImGui::GetFrameCount(); frame != s_lastFrame) {
+        s_counter = 0;
+        s_lastFrame = frame;
+    }
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+    ImGui::PushID(s_counter++);
+    ImGui::SmallButton("(?)");
+    ImGui::PopID();
+    ImGui::PopStyleColor(4);
+    ImGui::PopStyleVar();
 }
 
 void UI::HoverTooltip(const char* text, const char* warning)

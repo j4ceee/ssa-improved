@@ -19,30 +19,31 @@ namespace ssa::Game
 
     struct MotionControl
     {
-        char            _pad0[0x4];     // +0x000
-        void*           m_pCurrentMode; // +0x004
-        char            _pad1[0x18];    // +0x008
-        void*           m_pObject;      // +0x020
-        char            _pad2[0x08];    // +0x024
-        PhysicsObject*  physicsBody;    // +0x02C
-        char            _pad3[0x4];     // +0x030
+        char            _pad0[0x4];         // +0x000
+        void*           m_pCurrentMode;     // +0x004
+        char            _pad1[0x18];        // +0x008
+        void*           m_pObject;          // +0x020
+        char            _pad2[0x08];        // +0x024
+        PhysicsObject*  physicsBody;        // +0x02C
+        char            _pad3[0x4];         // +0x030
+        char            _pad4[0x306];       // +0x034
+        uint8_t         airMotionSuspended; // +0x33A
 
         [[nodiscard]] PhysicsObject* physicsObject() const { return physicsBody; }
     };
-    static_assert(sizeof(MotionControl) == 0x34);
     static_assert(offsetof(MotionControl, m_pObject) == 0x020);
     static_assert(offsetof(MotionControl, physicsBody) == 0x02C);
 
 
-    // CRC values confirmed from Character::Init
+    // CRC values
     enum class CharacterTeam : int
     {
-        Enemy       = -0x5AB23DB9, // enemy team - unconditional targeting setup
-        Skylander   = -0x6AE508FA, // player team - gets IsPvPLevel check in Init
-        Neutral     = -0x15D6E3E3, // third team type
+        Enemy       = -0x5AB23DB9, // enemy team
+        Skylander   = -0x6AE508FA, // player team
+        Neutral     = -0x15D6E3E3,
     };
 
-    // charExtraBits (+0x1A8) - first word of ltl2::bitset<33,uint>
+    // charExtraBits
     static constexpr uint32_t kCharBitImmovable = 0x000001; // physics immovable, zeroes linear velocity
     static constexpr uint32_t kCharBitDisableCollision = 0x000004;
     static constexpr uint32_t kCharBitDisablePhysics = 0x000008;
@@ -50,6 +51,8 @@ namespace ssa::Game
     static constexpr uint32_t kCharBitInit = 0x000040;
     static constexpr uint32_t kCharBitCinemaLock = 0x000200; // gates movement / anim / physics in Update
     static constexpr uint32_t kCharBitFreeze = 0x100000; // gates Update like CinemaLock, but additionally FreezeSound + disables AnimCtrl components
+    static constexpr uint32_t kCharBitNoLaunch = 0x0400000; // jump pad refuses when set (meaning unknown)
+    static constexpr uint32_t kCharBitAirborne = 0x1000000; // set by AirMotion::Jump / fast falls, cleared on landing
 
     // charFlags (+0x1A4)
     static constexpr uint32_t kCharFlagGhost = 0x40000;

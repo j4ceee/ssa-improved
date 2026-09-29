@@ -13,6 +13,7 @@ namespace ssa
 
         DEBUG_CAM_UPDATE,
         RETRIEVE_GAME_DATA,
+        AIR_MOTION_JUMP,
         CHARACTER_LIST, // Skylanders Character instances only
         CHARACTER_LIST_ALL, // all Character instances (enemies + players + neutral)
         TARGETING_LIST,
@@ -24,6 +25,7 @@ namespace ssa
         PLAYER_PAD_VTABLE,
         AI_PAD_VTABLE,
         REMOTE_PAD_VTABLE,
+        PAD_STATE_ARRAY,
 
         // DIRECT GAME HOOKS ARE IMPOSSIBLE DUE TO SECUROM ---------------------------------------
         // input

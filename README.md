@@ -32,6 +32,9 @@
 - HP & Damage multipliers for enemies to adjust difficulty
 - Multiplier for experience gained from defeating enemies
 - Per-player controls featuring god mode, health modifications, faction swapping and more
+- Jumping by pressing the left stick (`L3`) on a controller, with adjustable jump height
+- Option to remove invisible walls that only block Skylanders
+- Most cutscenes can be skipped immediately, including on a first playthrough
 - Setting to load into any level at any time
 - Reusable Magic Items & infinite duration for Magic Items
 - Free cam

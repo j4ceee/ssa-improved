@@ -15,6 +15,7 @@
 #include "game/custom/free_cam.h"
 #include "game/custom/grassPatch.h"
 #include "game/custom/items.h"
+#include "game/custom/jump.h"
 #include "game/custom/load_screen.h"
 #include "game/custom/skylanderSettings.h"
 
@@ -416,6 +417,7 @@ namespace ssa::D3D9Hooks
         Game::Difficulty::Update();
         Game::CinemaSkip::Update();
         Game::SkylanderSettings::Update();
+        Game::Jump::Update();
         Game::ItemMods::Update();
         Game::FreeCam::Update();
 

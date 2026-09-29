@@ -15,6 +15,7 @@ namespace ssa
 
         g_Address[DEBUG_CAM_UPDATE] = 0x008b0f70;
         g_Address[RETRIEVE_GAME_DATA] = 0x0050e4c0;
+        g_Address[AIR_MOTION_JUMP] = 0x00A44B80;
         g_Address[CHARACTER_LIST] = 0x00ca2a54;
         g_Address[CHARACTER_LIST_ALL] = 0x00ca2a48;
         g_Address[TARGETING_LIST] = 0x00e3ddf0;
@@ -24,8 +25,9 @@ namespace ssa
         g_Address[MOUSE_DEVICE] = 0x00ca29e0; // DirectInput mouse device pointer
         // VTables
         g_Address[PLAYER_PAD_VTABLE] = 0x00bb6414;
-        g_Address[AI_PAD_VTABLE]     = 0x00bb645c;
+        g_Address[AI_PAD_VTABLE] = 0x00bb645c;
         g_Address[REMOTE_PAD_VTABLE] = 0x00bb64a4;
+        g_Address[PAD_STATE_ARRAY] = 0x00D99C30;
 
         // DIRECT GAME HOOKS ARE IMPOSSIBLE DUE TO SECUROM ---------------------------------------
         // g_Address[UPDATE_CONTROLLER] = 0x009475f0;

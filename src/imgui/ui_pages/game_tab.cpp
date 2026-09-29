@@ -122,6 +122,22 @@ namespace ssa::UIPages
         // -----------------------------------------------------------------------------------------------------
         if (ImGui::CollapsingHeader(ICON_SKY_MAGIC " Skylanders", ImGuiTreeNodeFlags_DefaultOpen))
         {
+            if (ImGui::Checkbox("Enable Jumping", &g_config.jumpEnabled))
+            {
+                EnableJumping(g_config.jumpEnabled);
+            }
+            ImGui::SameLine();
+            UI::HelpMarker("Allows you to jump by pressing the Left Stick on your controller.");
+
+            if (ImGui::InputInt("Jump Height", &g_config.jumpHeight, 1, 2))
+            {
+                SetJumpHeight(g_config.jumpHeight);
+            }
+            ImGui::SameLine();
+            UI::HelpMarker("Adjusts the jump height.");
+
+            ImGui::Spacing();
+
             auto* list = Game::Character::instanceSkylandersList();
 
             if (!list || list->empty())
