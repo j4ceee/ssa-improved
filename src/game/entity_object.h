@@ -26,6 +26,20 @@ namespace ssa::Game
         uint8_t*    buckets;        // +0x09C
         uint32_t    bucketCount;    // +0x0A0
 
+        // enumerates every component on this object; fn(uint32_t crc, void* component)
+        template <class F>
+        void forEachComponent(F&& fn) const
+        {
+            if (!buckets || bucketCount == 0 || bucketCount > 4096) return;
+            for (uint32_t i = 0; i < bucketCount; i++)
+            {
+                auto* head = reinterpret_cast<ComponentNode*>(buckets + i * 8);
+                int guard = 0;
+                for (auto* n = head->next; n && n != head && guard < 64; n = n->next, guard++)
+                    fn(n->crc, n->component);
+            }
+        }
+
         [[nodiscard]] void* findComponent(uint32_t crc) const
         {
             if (!buckets || bucketCount == 0) return nullptr;

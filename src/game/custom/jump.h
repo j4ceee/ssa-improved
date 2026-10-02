@@ -16,7 +16,7 @@ namespace ssa::Game::Jump
     {
         auto* mc = ch->m_pMotionControl;
         auto* obj = static_cast<EntityObject*>(ch->m_pObject);
-        if (!mc || !obj || mc->airMotionSuspended) return false;
+        if (!mc || !obj || mc->flying) return false;
         if (ch->charExtraBits & (kCharBitNoLaunch | kCharBitAirborne | kCharBitCinemaLock | kCharBitFreeze))
             return false;
 

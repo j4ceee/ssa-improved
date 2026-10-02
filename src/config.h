@@ -61,6 +61,9 @@ namespace ssa
 
         int freeCamFov = static_cast<int>(Game::kDefaultFOV);
 
+        // stop the game from snapping players back at ledges / invalid ground (see SkylanderSettings::UpdateEdgeGuards)
+        bool removeEdgeGuards = false;
+
         bool textureCycler = false;
 
         bool p1GodMode = false;

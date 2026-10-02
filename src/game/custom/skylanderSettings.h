@@ -26,6 +26,23 @@ namespace ssa::Game::SkylanderSettings
         }
     }
 
+    // MotionControl::PostPostUpdate
+    // - snaps players back to their previous XY position (and zeroes their horizontal velocity) whenever a ray straight down finds no valid ground: level edges, disconnected turtles, water / lava
+    // - m_checkMove gates the whole check; constructor sets it to 1 and states that clear it temporarily (jump pads etc.) restore it themselves
+    inline void UpdateEdgeGuards(Character* ch, const bool remove, const bool wasRemoved)
+    {
+        if (!ch->isPlayer())
+            return;
+
+        auto* mc = ch->m_pMotionControl;
+        if (!mc) return;
+
+        if (remove)
+            mc->checkMove = 0;
+        else if (wasRemoved)
+            mc->checkMove = 1; // option was just turned off: back to the constructor default
+    }
+
     // called from hook_Present every frame
     inline void Update()
     {
@@ -33,6 +50,8 @@ namespace ssa::Game::SkylanderSettings
 
         static bool s_blockersRemoved = false;
         const bool removeBlockers = g_config.removePlayerBlockers;
+        static bool s_edgeGuardsRemoved = false;
+        const bool removeEdgeGuards = g_config.removeEdgeGuards;
 
         for (const auto& ref : *list)
         {
@@ -42,6 +61,7 @@ namespace ssa::Game::SkylanderSettings
                 continue;
 
             UpdatePlayerBlockers(ch, removeBlockers, s_blockersRemoved);
+            UpdateEdgeGuards(ch, removeEdgeGuards, s_edgeGuardsRemoved);
 
             if (ch->isPlayer1())
             {
@@ -58,5 +78,6 @@ namespace ssa::Game::SkylanderSettings
         }
 
         s_blockersRemoved = removeBlockers;
+        s_edgeGuardsRemoved = removeEdgeGuards;
     }
 }

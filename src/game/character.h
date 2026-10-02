@@ -27,12 +27,29 @@ namespace ssa::Game
         PhysicsObject*  physicsBody;        // +0x02C
         char            _pad3[0x4];         // +0x030
         char            _pad4[0x306];       // +0x034
-        uint8_t         airMotionSuspended; // +0x33A
+        uint8_t         flying;             // +0x33A jump pads refuse while set
+        uint8_t         hovering;           // +0x33B
+        uint8_t         alwaysHovering;     // +0x33C
+        uint8_t         prevOnWater;        // +0x33D
+        uint8_t         onWater;            // +0x33E
+        uint8_t         onLava;             // +0x33F
+        uint8_t         fixMove;            // +0x340 set by PostPostUpdate when it snapped the player back to prevPos this frame
+        char            _pad5[0xF8];        // +0x341
+        uint8_t         airMotion;          // +0x439
+        uint8_t         checkMove;          // +0x43A gates ground validity in PostPostUpdate; constructor sets it to 1, some states (jump pads) clear it temporarily
+
+        // PostPostUpdate:
+        // - ray straight down found no valid ground, or CheckCanMove detected water / lava
+        // - 0.2s respawn timer for invalid motion
 
         [[nodiscard]] PhysicsObject* physicsObject() const { return physicsBody; }
     };
     static_assert(offsetof(MotionControl, m_pObject) == 0x020);
     static_assert(offsetof(MotionControl, physicsBody) == 0x02C);
+    static_assert(offsetof(MotionControl, flying) == 0x33A);
+    static_assert(offsetof(MotionControl, fixMove) == 0x340);
+    static_assert(offsetof(MotionControl, airMotion) == 0x439);
+    static_assert(offsetof(MotionControl, checkMove) == 0x43A);
 
 
     // CRC values

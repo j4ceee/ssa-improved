@@ -300,6 +300,11 @@ namespace ssa::UIPages
             ImGui::SameLine();
             UI::HelpMarker("Removes invisible walls that only block Skylanders. Floors, regular walls and other invisible walls are unaffected.",
                 "This can let you reach areas the level wasn't designed for. If you get stuck or fall out of the level, turn this off.");
+
+            // TODO: fix respawn weirdness, water detection for non-water / -flying Skylanders, allow jumping over gaps
+            // ImGui::Checkbox("Remove edge limits", &g_config.removeEdgeGuards);
+            // ImGui::SameLine();
+            // UI::HelpMarker("Lets you walk off ledges, level edges and platforms the game normally stops you at.");
         }
     }
 }
