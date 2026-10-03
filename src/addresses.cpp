@@ -11,8 +11,10 @@ namespace ssa
         g_Address[WORLD] = 0x00E55FC0;
         g_Address[GAME] = 0x00E7B478;
         g_Address[MAGIC_ITEM_MANAGER] = 0x00E33004;
-        g_Address[CINEMA_TRIGGER_LIST] = 0x00CBC82C;
+        g_Address[SOUND_MANAGER] = 0x00E35604;
+        g_Address[SOUND_SYSTEM] = 0x00e32b48;
 
+        g_Address[CINEMA_TRIGGER_LIST] = 0x00CBC82C;
         g_Address[DEBUG_CAM_UPDATE] = 0x008b0f70;
         g_Address[RETRIEVE_GAME_DATA] = 0x0050e4c0;
         g_Address[AIR_MOTION_JUMP] = 0x00A44B80;
@@ -22,12 +24,22 @@ namespace ssa
         g_Address[GRASS_COUNT] = 0x00d9146c; // number of grass patches to draw (probably / maybe?)
         g_Address[DEFAULT_FOV] = 0x00cbc7f0; // default field of view (used for active camera)
 
+        g_Address[RUINS_STATE] = 0x00d8594c; // hub stage (1-6) cached by lux::GetSpyroRuinsState
+
         g_Address[MOUSE_DEVICE] = 0x00ca29e0; // DirectInput mouse device pointer
         // VTables
         g_Address[PLAYER_PAD_VTABLE] = 0x00bb6414;
         g_Address[AI_PAD_VTABLE] = 0x00bb645c;
         g_Address[REMOTE_PAD_VTABLE] = 0x00bb64a4;
         g_Address[PAD_STATE_ARRAY] = 0x00D99C30;
+
+        // sound system stuff
+        g_Address[AK_REGISTER_GAME_OBJ] = 0x006272f0;
+        g_Address[AK_SET_POSITION] = 0x00628090;
+        g_Address[AK_POST_EVENT] = 0x0062a840;
+        g_Address[AK_STOP_PLAYING_ID] = 0x00627d90;
+        g_Address[AK_EXECUTE_ACTION_ON_EVENT] = 0x00629fd0;
+        g_Address[AK_STOP_ALL] = 0x00627d40;
 
         // DIRECT GAME HOOKS ARE IMPOSSIBLE DUE TO SECUROM ---------------------------------------
         // g_Address[UPDATE_CONTROLLER] = 0x009475f0;

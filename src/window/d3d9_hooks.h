@@ -17,6 +17,7 @@
 #include "game/custom/items.h"
 #include "game/custom/jump.h"
 #include "game/custom/load_screen.h"
+#include "game/custom/music.h"
 #include "game/custom/skylanderSettings.h"
 
 namespace ssa::D3D9Hooks
@@ -420,6 +421,7 @@ namespace ssa::D3D9Hooks
         Game::Jump::Update();
         Game::ItemMods::Update();
         Game::FreeCam::Update();
+        Game::Music::Update();
 
         return orig_Present(pDevice, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
     }

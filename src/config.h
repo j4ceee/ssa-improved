@@ -5,6 +5,7 @@
 #include <imgui.h>
 #include "log.h"
 #include "game/camera.h"
+#include "game/data/music.h"
 
 namespace ssa
 {
@@ -37,6 +38,9 @@ namespace ssa
         bool removePlayerBlockers = true; // strip the player-only invisible wall collision layer from local players
         bool jumpEnabled = true;
         int jumpHeight = 3;
+
+        // Music
+        uint32_t menuMusicEvent = Game::Data::Music::Hub_5.eventId; // Wwise event played on the main menu (default Hub 5, Main Menu = original track)
 
         // Difficulty
         float hpMult = 1.0f;
@@ -134,6 +138,7 @@ namespace ssa
         LogF("[Config] Texture dump: %d", g_config.textureDump);
         LogF("[Config] Infinite item duration: %d", g_config.infiniteItemDuration);
         LogF("[Config] Reusable items: %d", g_config.reusableItems);
+        LogF("[Config] Menu music: 0x%08X", g_config.menuMusicEvent);
     }
 
     // -------------------------------------------------------------------------
@@ -216,6 +221,10 @@ namespace ssa
             L"; Enable reusable items (0 = disabled (default), 1 = enabled)\n"
             L"ReusableItems=%d\n"
             L"\n"
+            L"[Music]\n"
+            L"; Music on the main menu (pick tracks in the mod menu, 0x4278CE72 = Hub 5 (default), 0x46E7191D = original menu music)\n"
+            L"MenuMusic=0x%08X\n"
+            L"\n"
             L"[Mod]\n"
             L"; Scale of the font of the in-game UI (1.0 = default size, 2.0 = double size, etc.)\n"
             L"FontScale=%.1f\n"
@@ -262,6 +271,9 @@ namespace ssa
             static_cast<int>(g_config.infiniteItemDuration),
             static_cast<int>(g_config.reusableItems),
 
+            // Music
+            g_config.menuMusicEvent,
+
             // Mod
             g_config.uiFontScale,
             static_cast<int>(g_config.textureMods),
@@ -293,6 +305,14 @@ namespace ssa
             GetPrivateProfileStringW(sec, key, nullptr, buf, 32, f);
             if (buf[0] == L'\0') return def;
             return wcstof(buf, nullptr);
+        };
+
+        auto getHex = [&](const wchar_t* sec, const wchar_t* key, uint32_t def) -> uint32_t
+        {
+            wchar_t buf[16] = {};
+            GetPrivateProfileStringW(sec, key, nullptr, buf, 16, f);
+            if (buf[0] == L'\0') return def;
+            return static_cast<uint32_t>(wcstoul(buf, nullptr, 0));
         };
 
         // -- Config
@@ -352,6 +372,11 @@ namespace ssa
         // Magic Items
         g_config.infiniteItemDuration = getInt(L"MagicItems", L"InfiniteItemDuration", 0) != 0;
         g_config.reusableItems = getInt(L"MagicItems", L"ReusableItems", 0) != 0;
+
+        // Music (unknown ids fall back to the default)
+        const uint32_t menuMusic = getHex(L"Music", L"MenuMusic", g_config.menuMusicEvent);
+        if (Game::Data::FindMusicTrack(menuMusic))
+            g_config.menuMusicEvent = menuMusic;
 
         // Mod
         float fontScale = getFloat(L"Mod", L"FontScale", 1.0f);
@@ -560,6 +585,12 @@ namespace ssa
     inline void EnableReusableItems(bool value)
     {
         g_config.reusableItems = value;
+        SaveConfig();
+    }
+
+    inline void SetMenuMusic(uint32_t eventId)
+    {
+        g_config.menuMusicEvent = eventId;
         SaveConfig();
     }
 } // namespace ssa

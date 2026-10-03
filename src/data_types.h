@@ -127,3 +127,12 @@ struct List
 };
 
 static_assert(sizeof(List<int>) == 12);
+
+// SharedPtr -----------------------------------------------------------------------------------------------------------
+template <typename T>
+struct SharedPtr
+{
+    T* ptr;
+    void* ctrl;
+};
+static_assert(sizeof(SharedPtr<int>) == 8);

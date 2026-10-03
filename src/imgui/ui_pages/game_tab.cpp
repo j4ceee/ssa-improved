@@ -5,6 +5,8 @@
 #include "game/character.h"
 #include "game/game.h"
 #include "game/custom/free_cam.h"
+#include "game/data/levels.h"
+#include "game/data/music.h"
 #include "imgui/fonts/IconsSkylanders.h"
 
 namespace ssa::UIPages
@@ -226,7 +228,7 @@ namespace ssa::UIPages
                 // --- Level selector
                 static uint32_t s_selectedCrc = 0;
                 static uint32_t s_lastSeenLevel = 0;
-                if (s_selectedCrc == 0 && (std::strcmp(currentDesc->m_LevelFile.c_str(), "FrontEnd") != 0))
+                if (s_selectedCrc == 0 && Game::Data::Levels::FrontEnd.crc != currentDesc->m_Id)
                 {
                     s_selectedCrc = game->m_CurrLevel; // pre-select current level on first open
                 }
@@ -239,8 +241,8 @@ namespace ssa::UIPages
                 // returns the best available display label for a descriptor
                 auto levelLabel = [](const Game::LevelDesc& desc) -> const char*
                 {
-                    if (const auto* info = Game::Data::GetLevelDisplayInfo(desc.m_Id))
-                        return info->displayName;
+                    if (const auto* info = Game::Data::FindLevel(desc.m_Id))
+                        return info->label();
                     return desc.m_LevelFile.c_str();
                 };
 
@@ -253,9 +255,8 @@ namespace ssa::UIPages
                 {
                     for (const auto& desc : game->m_GamePackage.m_Levels)
                     {
-                        if (std::strcmp(desc.m_Category.c_str(), "PvP_Level") == 0 ||
-                            std::strcmp(desc.m_Category.c_str(), "TestLevels") == 0 ||
-                            std::strcmp(desc.m_LevelFile.c_str(), "FrontEnd") == 0)
+                        const auto* info = Game::Data::FindLevel(desc.m_Id);
+                        if (info && !info->loadable)
                             continue;
 
                         const bool isCurrent = desc.m_Id == game->m_CurrLevel;
@@ -305,6 +306,39 @@ namespace ssa::UIPages
             // ImGui::Checkbox("Remove edge limits", &g_config.removeEdgeGuards);
             // ImGui::SameLine();
             // UI::HelpMarker("Lets you walk off ledges, level edges and platforms the game normally stops you at.");
+        }
+
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        // Music
+        // -----------------------------------------------------------------------------------------------------
+        if (ImGui::CollapsingHeader(ICON_MD_MUSIC_NOTE " Music", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            uint32_t menuMusic = g_config.menuMusicEvent;
+
+            const auto* current = Game::Data::FindMusicTrack(menuMusic);
+            const char* preview = current ? current->name : "Unknown";
+
+            bool changed = false;
+            if (ImGui::BeginCombo("Main menu music", preview))
+            {
+                for (const auto* t : Game::Data::kMusicTracks)
+                {
+                    if (ImGui::Selectable(t->name, t->eventId == menuMusic))
+                    {
+                        menuMusic = t->eventId;
+                        changed = true;
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            if (changed)
+                SetMenuMusic(menuMusic);
+
+            ImGui::SameLine();
+            UI::HelpMarker("Music that plays on the main menu. Default = Hub 5 (final). Choose \"Main Menu (original)\" for the game's own menu track.");
         }
     }
 }

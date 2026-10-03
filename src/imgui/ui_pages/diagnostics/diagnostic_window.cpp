@@ -3,7 +3,9 @@
 #include "game/game.h"
 #include "game/magic_item_manager.h"
 #include "game/mp_game.h"
+#include "game/sound_system.h"
 #include "game/world.h"
+#include "game/data/levels.h"
 #include "imgui/ui.h"
 #include "imgui/fonts/IconsMaterialDesign.h"
 #include "window/texture_mods.h"
@@ -292,6 +294,43 @@ namespace ssa::UIPages
                 ImGui::Unindent();
             }
 
+            ImGui::Unindent();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Sound System"))
+        {
+            ImGui::Indent();
+            auto* ss = Game::SoundSystem::instance();
+            ImGui::TextDisabled("Instance: 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(ss)));
+            ImGui::TextDisabled("Music State: 0x%08X", Game::SoundManager::instance()->musicStateId);
+
+            if (ImGui::BeginTable("##playing_sounds", 4,
+                                  ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+            {
+                ImGui::TableSetupColumn("#");
+                ImGui::TableSetupColumn("Event");
+                ImGui::TableSetupColumn("Game Object");
+                ImGui::TableSetupColumn("Playing ID");
+                ImGui::TableHeadersRow();
+
+                int index = 0;
+                for (const auto& s : ss->playing)
+                {
+                    if (++index > 256) break; // corrupted-list guard
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::Text("%d", index);
+                    if (!s.ptr) continue;
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::Text("0x%08X", s.ptr->eventId);
+                    ImGui::TableSetColumnIndex(2);
+                    ImGui::Text("0x%08X", s.ptr->gameObject);
+                    ImGui::TableSetColumnIndex(3);
+                    ImGui::Text("0x%08X", s.ptr->playingId);
+                }
+                ImGui::EndTable();
+            }
             ImGui::Unindent();
             ImGui::TreePop();
         }
