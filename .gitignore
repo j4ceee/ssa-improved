@@ -32,6 +32,8 @@
 .idea/misc*
 .idea/editor*
 
+docs/
+tools/
 build/
 cmake-build-debug*/
 cmake-build-release*/

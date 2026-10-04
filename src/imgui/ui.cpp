@@ -10,6 +10,7 @@
 #include "imgui_impl_win32.h"
 #include "imgui_internal.h"
 #include "fonts/IconsMaterialDesign.h"
+#include "window/render_targets.h"
 #include "window/window_hooks.h"
 
 namespace ssa
@@ -256,6 +257,17 @@ void UI::Render()
         ImGui::PushFont(mainfont);
 
         UIPages::RenderDiagnosticWindow();
+
+        ImGui::PopFont();
+        ImGui::End();
+    }
+
+    RenderTargets::SetTracking(m_renderTargetTableVisible);
+    if (m_renderTargetTableVisible) {
+        ImGui::Begin("Render Targets", &m_renderTargetTableVisible);
+        ImGui::PushFont(mainfont);
+
+        UIPages::RenderRenderTargetTable();
 
         ImGui::PopFont();
         ImGui::End();

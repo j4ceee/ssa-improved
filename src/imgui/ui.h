@@ -38,6 +38,8 @@ namespace ssa
         void SetCharacterTableVisible(const bool visible) { m_characterTableVisible = visible; }
         [[nodiscard]] bool IsTargetTableVisible() const { return m_targetTableVisible; }
         void SetTargetTableVisible(const bool visible) { m_targetTableVisible = visible; }
+        [[nodiscard]] bool IsRenderTargetTableVisible() const { return m_renderTargetTableVisible; }
+        void SetRenderTargetTableVisible(const bool visible) { m_renderTargetTableVisible = visible; }
 
         static bool HandleHotkeyCapture(WPARAM wParam);
 
@@ -68,6 +70,7 @@ namespace ssa
         bool m_diagnosticWindowVisible = false;
         bool m_characterTableVisible = false;
         bool m_targetTableVisible = false;
+        bool m_renderTargetTableVisible = false;
 
         // ImGui settings handlers
         // static void* SettingsHandlerReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
@@ -176,5 +179,7 @@ namespace ssa
         void RenderDiagnosticWindow();
         void RenderCharacterTable();
         void RenderTargetTable();
+        void RenderRenderTargetTable();
+        void RenderAttackLightsDiagnostics();
     }
 } // namespace ssa

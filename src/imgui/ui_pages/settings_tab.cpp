@@ -99,6 +99,43 @@ namespace ssa::UIPages
                 SetTextureSharpness(g_config.textureSharpness);
             ImGui::SameLine();
             UI::HelpMarker("Adjusts the sharpness of distant textures. Higher levels may cause shimmering or aliasing on certain textures.");
+
+            // haze
+            ImGui::SliderFloat("Depth of Field", &g_config.dofStrength, 0.0f, 1.0f, "%.2f");
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                SetDofStrength(g_config.dofStrength);
+            ImGui::SameLine();
+            UI::HelpMarker("The game blurs objects that are far away or very close to the camera. 0 removes this blur completely, 1 is the original look.");
+
+            ImGui::SliderFloat("Fog (Haze)", &g_config.fogStrength, 0.0f, 1.0f, "%.2f");
+            if (ImGui::IsItemDeactivatedAfterEdit())
+                SetFogStrength(g_config.fogStrength);
+            ImGui::SameLine();
+            UI::HelpMarker("The distance haze that fades far-away objects toward the sky colour. 0 = no fog, 1 = original look.");
+
+            bool attackLights = g_config.attackLights;
+            if (ImGui::Checkbox("More Dynamic Lights", &attackLights))
+                EnableAttackLights(attackLights);
+            ImGui::SameLine();
+            UI::HelpMarker("Adds lights to projectile attacks that have none in the original game, like Zap's lightning bolts.");
+
+            bool lightShadows = g_config.lightShadows;
+            if (ImGui::Checkbox("Dynamic Light Shadows", &lightShadows))
+                EnableLightShadows(lightShadows);
+            ImGui::SameLine();
+            UI::HelpMarker("Lets dynamic lights (attack lights and placed lights in levels) cast shadows.");
+
+            bool softSunShadows = g_config.softSunShadows;
+            if (ImGui::Checkbox("Soft Sun Shadows", &softSunShadows))
+                EnableSoftSunShadows(softSunShadows);
+            ImGui::SameLine();
+            UI::HelpMarker("Sun shadows are sharp where an object touches the ground and get softer the further the shadow falls from it.");
+
+            bool waterReflections = g_config.waterReflections;
+            if (ImGui::Checkbox("Better Water", &waterReflections))
+                EnableWaterReflections(waterReflections);
+            ImGui::SameLine();
+            UI::HelpMarker("Adds screen space reflections, caustics and foam to water bodies. Turn this off to use the original water.");
         }
 
         ImGui::Spacing();

@@ -7,6 +7,7 @@
 #include "game/world.h"
 #include "game/data/levels.h"
 #include "imgui/ui.h"
+#include "imgui/ui_pages/diagnostics/debug_table.h"
 #include "imgui/fonts/IconsMaterialDesign.h"
 #include "window/texture_mods.h"
 
@@ -14,141 +15,60 @@ namespace ssa::UIPages
 {
     void RenderLevelList(const Game::Game* game)
     {
-        const auto& levels = game->m_GamePackage.m_Levels;
         const auto currentLevelId = game->m_CurrLevel;
 
-        if (ImGui::BeginTable("##level_desc_list", 6,
-            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY))
+        DebugTable table{ "CRC32", "Next Level", "Level Name", "Level File", "Category", "Death Height" };
+        for (const auto& desc : game->m_GamePackage.m_Levels)
         {
-            ImGui::TableSetupColumn("CRC32");
-            ImGui::TableSetupColumn("Next Level");
-            ImGui::TableSetupColumn("Level Name");
-            ImGui::TableSetupColumn("Level File");
-            ImGui::TableSetupColumn("Category");
-            ImGui::TableSetupColumn("Death Height");
-            ImGui::TableHeadersRow();
+            DebugTable::Row& row = table.AddRow();
+            if (desc.m_Id == currentLevelId)
+                row.background = TableColor::RowHighlight;
 
-            for (const auto& desc : levels)
-            {
-                ImGui::TableNextRow();
-
-                if (desc.m_Id == currentLevelId)
-                {
-                    ImGui::TableSetBgColor(
-                        ImGuiTableBgTarget_RowBg0,
-                        ImGui::GetColorU32(ImVec4(0.20f, 0.55f, 0.20f, 0.35f))
-                    );
-                }
-
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("0x%08X", desc.m_Id);
-
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("0x%08X", desc.m_NextLevel);
-
-                ImGui::TableSetColumnIndex(2);
-                if (auto* name = Game::Data::GetLevelDisplayInfo(desc.m_Id))
-                    ImGui::Text("%s", name->displayName);
-                else
-                    ImGui::TextDisabled("-");
-
-                ImGui::TableSetColumnIndex(3);
-                ImGui::Text("%s", desc.m_LevelFile.c_str());
-
-                ImGui::TableSetColumnIndex(4);
-                ImGui::Text("%s", desc.m_Category.c_str());
-
-                ImGui::TableSetColumnIndex(5);
-                ImGui::Text("%.1f", desc.m_fDeathHeight);
-            }
-            ImGui::EndTable();
+            row.Add(Hex(desc.m_Id)).Add(Hex(desc.m_NextLevel));
+            if (auto* name = Game::Data::GetLevelDisplayInfo(desc.m_Id))
+                row.Add(name->displayName);
+            else
+                row.Dim("-");
+            row.Add(desc.m_LevelFile.c_str()).Add(desc.m_Category.c_str()).Add(Fmt("%.1f", desc.m_fDeathHeight));
         }
+        table.Show("##level_desc_list", ImGuiTableFlags_ScrollY);
     }
+
     void RenderCharacterList(const Game::Game* game)
     {
-        const auto& chars = game->m_GamePackage.m_Characters;
-
-        if (ImGui::BeginTable("##char_desc_list", 6,
-            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY))
+        DebugTable table{ "CRC32", "Name", "Name String ID", "File", "Attributes", "Scale" };
+        for (const auto& desc : game->m_GamePackage.m_Characters)
         {
-            ImGui::TableSetupColumn("CRC32");
-            ImGui::TableSetupColumn("Name");
-            ImGui::TableSetupColumn("Name String ID");
-            ImGui::TableSetupColumn("File");
-            ImGui::TableSetupColumn("Attributes");
-            ImGui::TableSetupColumn("Scale");
-            ImGui::TableHeadersRow();
-
-            for (const auto& desc : chars)
-            {
-                ImGui::TableNextRow();
-
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("0x%08X", desc.m_Id);
-
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%s", desc.m_Name.c_str());
-
-                ImGui::TableSetColumnIndex(2);
-                ImGui::Text("0x%08X", desc.m_NameStrId);
-
-                ImGui::TableSetColumnIndex(3);
-                ImGui::Text("%s", desc.m_FilePath.c_str());
-
-                ImGui::TableSetColumnIndex(4);
-                ImGui::Text("0x%08X", desc.m_characterAttributes);
-
-                ImGui::TableSetColumnIndex(5);
-                ImGui::Text("%.1f", desc.m_fScale);
-            }
-            ImGui::EndTable();
+            table.AddRow()
+                .Add(Hex(desc.m_Id))
+                .Add(desc.m_Name.c_str())
+                .Add(Hex(desc.m_NameStrId))
+                .Add(desc.m_FilePath.c_str())
+                .Add(Hex(desc.m_characterAttributes))
+                .Add(Fmt("%.1f", desc.m_fScale));
         }
+        table.Show("##char_desc_list", ImGuiTableFlags_ScrollY);
     }
+
     void RenderMagicItemList(const Game::Game* game)
     {
-        const auto& items = game->m_GamePackage.m_MagicItems;
-        auto* mgr = Game::MagicItemManager::instance();
+        auto* item = Game::MagicItemManager::instance()->currItem();
 
-        if (ImGui::BeginTable("##magic_item_list", 3,
-            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+        DebugTable table{ "CRC32", "Name", "Type" };
+        for (const auto& desc : game->m_GamePackage.m_MagicItems)
         {
-            ImGui::TableSetupColumn("CRC32");
-            ImGui::TableSetupColumn("Name");
-            ImGui::TableSetupColumn("Type");
-            ImGui::TableHeadersRow();
+            DebugTable::Row& row = table.AddRow();
+            const bool isCurrent = item && item->m_Id == desc.m_Id;
+            if (isCurrent)
+                row.background = TableColor::RowHighlight;
 
-            for (const auto& desc : items)
-            {
-                ImGui::TableNextRow();
-
-                auto* item = mgr->currItem();
-                if (item && item->m_Id == desc.m_Id)
-                {
-                    ImGui::TableSetBgColor(
-                        ImGuiTableBgTarget_RowBg0,
-                        ImGui::GetColorU32(ImVec4(0.20f, 0.55f, 0.20f, 0.35f))
-                    );
-                }
-
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("0x%08X", desc.m_Id);
-
-                ImGui::TableSetColumnIndex(1);
-                if (item && item->m_Id == desc.m_Id)
-                {
-                    ImGui::Text("%s", item->name());
-                }
-                else
-                {
-                    ImGui::Text("%s", desc.m_Name.c_str());
-                }
-
-                ImGui::TableSetColumnIndex(2);
-                ImGui::Text("0x%08X", desc.m_Type);
-            }
-            ImGui::EndTable();
+            row.Add(Hex(desc.m_Id))
+               .Add(isCurrent ? item->name() : desc.m_Name.c_str())
+               .Add(Hex(desc.m_Type));
         }
+        table.Show("##magic_item_list");
     }
+
     void RenderCurrentLevelStreams(const Game::Game* game)
     {
         auto* currLevelDesc = game->getCurrLevelDesc();
@@ -162,51 +82,28 @@ namespace ssa::UIPages
 
         if (!streamFiles.empty())
         {
-            if (ImGui::BeginTable("##stream_files", 1,
-                                  ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
-            {
-                ImGui::TableSetupColumn("Name");
-                ImGui::TableHeadersRow();
-
-                for (const auto& file : streamFiles)
-                {
-                    ImGui::TableNextRow();
-
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("%s", file.c_str());
-                }
-                ImGui::EndTable();
-            }
+            DebugTable table{ "Name" };
+            for (const auto& file : streamFiles)
+                table.AddRow().Add(file.c_str());
+            table.Show("##stream_files");
         }
         else if (!stageFiles.empty())
         {
-            if (ImGui::BeginTable("##stage_files", 2,
-                                  ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+            DebugTable table{ "Stage", "Name" };
+            int32_t stage = -1;
+            for (const auto& stageFile : stageFiles)
             {
-                ImGui::TableSetupColumn("Stage");
-                ImGui::TableSetupColumn("Name");
-                ImGui::TableHeadersRow();
-
-                int32_t stage = -1;
-                for (const auto& stageFile : stageFiles)
+                for (const auto& file : stageFile.streamFiles)
                 {
-                    for (const auto& file : stageFile.streamFiles)
-                    {
-                        ImGui::TableNextRow();
-
-                        if (stage != stageFile.state)
-                        {
-                            stage = stageFile.state;
-                            ImGui::TableSetColumnIndex(0);
-                            ImGui::Text("%d", stage);
-                        }
-
-                        ImGui::TableSetColumnIndex(1);
-                        ImGui::Text("%s", file.c_str());
-                    }
+                    // the stage is only shown on its first row, but every row of the copy has it
+                    const bool firstOfStage = stage != stageFile.state;
+                    stage = stageFile.state;
+                    table.AddRow()
+                        .AddFull(firstOfStage ? Fmt("%d", stage) : std::string(), Fmt("%d", stage))
+                        .Add(file.c_str());
                 }
-                ImGui::EndTable();
             }
+            table.Show("##stage_files");
         }
         else
         {
@@ -305,32 +202,19 @@ namespace ssa::UIPages
             ImGui::TextDisabled("Instance: 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(ss)));
             ImGui::TextDisabled("Music State: 0x%08X", Game::SoundManager::instance()->musicStateId);
 
-            if (ImGui::BeginTable("##playing_sounds", 4,
-                                  ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+            DebugTable table{ "#", "Event", "Game Object", "Playing ID" };
+            int index = 0;
+            for (const auto& s : ss->playing)
             {
-                ImGui::TableSetupColumn("#");
-                ImGui::TableSetupColumn("Event");
-                ImGui::TableSetupColumn("Game Object");
-                ImGui::TableSetupColumn("Playing ID");
-                ImGui::TableHeadersRow();
+                if (++index > 256) break; // corrupted-list guard
 
-                int index = 0;
-                for (const auto& s : ss->playing)
-                {
-                    if (++index > 256) break; // corrupted-list guard
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("%d", index);
-                    if (!s.ptr) continue;
-                    ImGui::TableSetColumnIndex(1);
-                    ImGui::Text("0x%08X", s.ptr->eventId);
-                    ImGui::TableSetColumnIndex(2);
-                    ImGui::Text("0x%08X", s.ptr->gameObject);
-                    ImGui::TableSetColumnIndex(3);
-                    ImGui::Text("0x%08X", s.ptr->playingId);
-                }
-                ImGui::EndTable();
+                DebugTable::Row& row = table.AddRow();
+                row.Add(std::to_string(index));
+                if (!s.ptr) continue;
+                row.Add(Hex(s.ptr->eventId)).Add(Hex(s.ptr->gameObject)).Add(Hex(s.ptr->playingId));
             }
+            table.Show("##playing_sounds");
+
             ImGui::Unindent();
             ImGui::TreePop();
         }
@@ -407,41 +291,23 @@ namespace ssa::UIPages
                 "0 - Swarmer", "1 - Spawner", "2 - Unknown", "3 - Unknown", "4 - Unknown", "5 - Unknown", "6 - Unknown", "7 - Unknown",
             };
 
-            if (ImGui::BeginTable("##enemy_stats", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+            DebugTable table{ "Class", "DMG (raw)", "DMG (current)" };
+            for (int i = 0; i < 8; i++)
             {
-                ImGui::TableSetupColumn("Class");
-                ImGui::TableSetupColumn("DMG (raw)");
-                ImGui::TableSetupColumn("DMG (current)");
-                ImGui::TableHeadersRow();
-
-                for (int i = 0; i < 8; i++)
-                {
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("%s", kClassNames[i]);
-
-                    if (levelLoaded)
-                    {
-                        ImGui::TableSetColumnIndex(1);
-                        ImGui::Text("%.2f", Game::Difficulty::s_baseDmgSnapshot[i]);
-                        ImGui::TableSetColumnIndex(2);
-                        ImGui::Text("%.2f", enemy.m_fBaseDamage[i]);
-                    }
-                    else
-                    {
-                        for (int c = 1; c < 3; c++)
-                        {
-                            ImGui::TableSetColumnIndex(c);
-                            ImGui::TextDisabled("--");
-                        }
-                    }
-                }
-                ImGui::EndTable();
+                DebugTable::Row& row = table.AddRow();
+                row.Add(kClassNames[i]);
+                if (levelLoaded)
+                    row.Add(Fmt("%.2f", Game::Difficulty::s_baseDmgSnapshot[i])).Add(Fmt("%.2f", enemy.m_fBaseDamage[i]));
+                else
+                    row.Dim("--").Dim("--");
             }
+            table.Show("##enemy_stats");
 
             ImGui::Unindent();
             ImGui::TreePop();
         }
+
+        RenderAttackLightsDiagnostics();
 
         ImGui::Spacing();
         ImGui::Spacing();
@@ -453,5 +319,10 @@ namespace ssa::UIPages
 
         if (ImGui::Button("Open Target Table"))
             UI::Get()->SetTargetTableVisible(true);
+
+        ImGui::Spacing();
+
+        if (ImGui::Button("Open Render Target Table"))
+            UI::Get()->SetRenderTargetTableVisible(true);
     }
 } // namespace ssa::UIPages

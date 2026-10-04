@@ -91,6 +91,12 @@ namespace ssa::UIPages
             ImGui::SliderInt("Free Cam FOV", &g_config.freeCamFov, 1, 179, "%d°");
             ImGui::SameLine();
             UI::HelpMarker("Field of view (in degrees) of the free cam. Default = 53");
+
+            ImGui::Checkbox("Hide in-game UI", &g_config.hideUi);
+            ImGui::SameLine();
+            UI::HelpMarker("Hides the player status displays (health bars, names, ...) during gameplay, e.g. for screenshots. "
+                "Pause menus and the main menu stay visible.",
+                "Not saved, resets when the game restarts.");
         }
 
         ImGui::Spacing();

@@ -11,13 +11,13 @@ namespace ssa::Game::Difficulty
     inline float s_baseDmgSnapshot[8] = {};
     inline void* s_snapshotAttr = nullptr;
 
-    inline void ApplyDamageMultiplier(Game::EnemySettings& enemy)
+    inline void ApplyDamageMultiplier(EnemySettings& enemy)
     {
         for (int i = 0; i < 8; i++)
             enemy.m_fBaseDamage[i] = s_baseDmgSnapshot[i] * g_config.dmgMult;
     }
 
-    inline void SnapshotAndApplyDamage(Game::EnemySettings& enemy)
+    inline void SnapshotAndApplyDamage(EnemySettings& enemy)
     {
         memcpy(s_baseDmgSnapshot, enemy.m_fBaseDamage, sizeof(s_baseDmgSnapshot));
         s_snapshotAttr = enemy.m_pLevelAttribute;

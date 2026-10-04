@@ -8,6 +8,9 @@
 #pragma pack(push, 1)
 namespace ssa::Game
 {
+    // World::DeleteObject marks an object for deletion with this bit
+    static constexpr uint32_t kEntityFlagDeleted = 0x80000000;
+
     struct ComponentNode
     {
         uintptr_t       prevTagged; // +0x0
@@ -25,6 +28,8 @@ namespace ssa::Game
         char        _pad2[0x38];    // +0x064
         uint8_t*    buckets;        // +0x09C
         uint32_t    bucketCount;    // +0x0A0
+
+        [[nodiscard]] bool isDeleted() const { return (flags & kEntityFlagDeleted) != 0; }
 
         // enumerates every component on this object; fn(uint32_t crc, void* component)
         template <class F>

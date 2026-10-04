@@ -26,11 +26,17 @@ namespace ssa
 
         g_Address[RUINS_STATE] = 0x00d8594c; // hub stage (1-6) cached by lux::GetSpyroRuinsState
 
+        g_Address[LIGHT_FACTORY] = 0x00981c60; // lux::Light::LightFromLX
+        g_Address[SHARED_CTRL_ON_STRONG_ZERO] = 0x0099d8e0;
+        g_Address[SHARED_CTRL_ON_WEAK_ZERO] = 0x0099d890;
+
         g_Address[MOUSE_DEVICE] = 0x00ca29e0; // DirectInput mouse device pointer
         // VTables
         g_Address[PLAYER_PAD_VTABLE] = 0x00bb6414;
         g_Address[AI_PAD_VTABLE] = 0x00bb645c;
         g_Address[REMOTE_PAD_VTABLE] = 0x00bb64a4;
+        g_Address[LIGHT_VTABLE] = 0x00babc4c;
+        g_Address[PROJECTILE_VTABLE] = 0x00bbc034;
         g_Address[PAD_STATE_ARRAY] = 0x00D99C30;
 
         // sound system stuff

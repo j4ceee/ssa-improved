@@ -2,7 +2,7 @@
 
 #include <imgui.h>
 #include "game/character.h"
-#include "window/texture_mods.h"
+#include "imgui/ui_pages/diagnostics/debug_table.h"
 
 namespace ssa::UIPages
 {
@@ -10,138 +10,71 @@ namespace ssa::UIPages
     {
         auto* list = Game::Character::instanceCharactersList();
 
-        ImGui::TextDisabled("Instance: 0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(list)));
+        ImGui::TextDisabled("Instance: %s", Hex(reinterpret_cast<uintptr_t>(list)).c_str());
         ImGui::Spacing();
 
         if (!list || list->empty())
         {
             ImGui::TextDisabled("Character List not initialized or empty.");
+            return;
         }
-        else if (ImGui::BeginTable("##char_list", 16,
-            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY))
+
+        DebugTable table{
+            "Address", "Team", "nameID", "Type", "Base HP", "HP Mult", "Atk Mult", "Curr HP", "Last damage",
+            "damageRecMask", "dRM Prev", "Pad", "Char Bits", "Char Bits - Binary", "Physics - Send", "Physics - Receive"
+        };
+
+        for (const auto& ref : *list)
         {
-            ImGui::TableSetupColumn("Address");
-            ImGui::TableSetupColumn("Team");
-            ImGui::TableSetupColumn("nameID");
-            ImGui::TableSetupColumn("Type");
-            ImGui::TableSetupColumn("Base HP");
-            ImGui::TableSetupColumn("HP Mult");
-            ImGui::TableSetupColumn("Atk Mult");
-            ImGui::TableSetupColumn("Curr HP");
-            ImGui::TableSetupColumn("Last damage");
-            ImGui::TableSetupColumn("damageRecMask");
-            ImGui::TableSetupColumn("dRM Prev");
-            ImGui::TableSetupColumn("Pad");
-            ImGui::TableSetupColumn("Char Bits");
-            ImGui::TableSetupColumn("Char Bits - Binary");
-            ImGui::TableSetupColumn("Physics - Send");
-            ImGui::TableSetupColumn("Physics - Receive");
-            ImGui::TableHeadersRow();
+            auto* ch = ref.mPtr;
+            DebugTable::Row& row = table.AddRow();
 
-            for (const auto& ref : *list)
+            row.Dim(Hex(reinterpret_cast<uintptr_t>(ch)));
+
+            switch (ch->m_team)
             {
-                auto* ch = ref.mPtr;
-
-                ImGui::TableNextRow();
-
-                // Address
-                ImGui::TableSetColumnIndex(0);
-                ImGui::TextDisabled("0x%08X", static_cast<uint32_t>(reinterpret_cast<uintptr_t>(ch)));
-
-                // Team
-                ImGui::TableSetColumnIndex(1);
-                switch (ch->m_team)
-                {
-                case Game::CharacterTeam::Skylander:
-                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.6f, 1.0f), "Skylander");
-                    break;
-                case Game::CharacterTeam::Enemy:
-                    ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Enemy");
-                    break;
-                case Game::CharacterTeam::Neutral:
-                    ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.4f, 1.0f), "Neutral");
-                    break;
-                default:
-                    ImGui::TextDisabled("0x%08X", static_cast<uint32_t>(static_cast<int>(ch->m_team)));
-                    break;
-                }
-
-                // nameID - CRC identifying which character type (Zap, Spyro, troll, etc.)
-                ImGui::TableSetColumnIndex(2);
-                ImGui::TextDisabled("0x%08X", ch->nameID);
-
-                // type
-                ImGui::TableSetColumnIndex(3);
-                if (ch->isPlayer())
-                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.6f, 1.0f), "Player %d", ch->contID + 1);
-                else if (ch->isEnemy())
-                    ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Enemy (0x%X)", ch->nameID);
-                else
-                    ImGui::Text("Neutral");
-
-                // Base HP
-                ImGui::TableSetColumnIndex(4);
-                ImGui::Text("%.1f", ch->baseHP);
-
-                // HP multiplier
-                ImGui::TableSetColumnIndex(5);
-                ImGui::Text("%.2f", ch->hpMultiplier);
-
-                // Attack multiplier
-                ImGui::TableSetColumnIndex(6);
-                ImGui::Text("%.2f", ch->attackMultiplier);
-
-                // Current HP
-                ImGui::TableSetColumnIndex(7);
-                ImGui::Text("%.1f", ch->m_fCurrHealth);
-
-
-                ImGui::TableSetColumnIndex(8);
-                ImGui::Text("%.1f", ch->m_fLastRemoveHealth);
-
-                // damageRecMask
-                ImGui::TableSetColumnIndex(9);
-                ImGui::Text("0x%08X", ch->damageRecMask);
-
-                // damageRecMaskPrev
-                ImGui::TableSetColumnIndex(10);
-                ImGui::Text("0x%08X", ch->damageRecMaskPrev);
-
-                // Pad
-                ImGui::TableSetColumnIndex(11);
-                if (ch->isPlayer())
-                    ImGui::Text("P");
-                else if (ch->isLocalAI())
-                    ImGui::Text("AI");
-                else if (ch->isRemotePlayer())
-                    ImGui::Text("R");
-                else
-                    ImGui::Text("-");
-
-                // raw hex
-                ImGui::TableSetColumnIndex(12);
-                ImGui::Text("0x%08X", ch->charExtraBits);
-
-                // binary
-                ImGui::TableSetColumnIndex(13);
-                {
-                    char bits[33];
-                    for (int b = 0; b < 32; b++)
-                        bits[31 - b] = (ch->charExtraBits & (1u << b)) ? '1' : '0';
-                    bits[32] = '\0';
-                    ImGui::TextDisabled("%s", bits);
-                }
-
-                // physics send
-                ImGui::TableSetColumnIndex(14);
-                ImGui::Text("0x%04X", ch->m_pMotionControl->physicsBody->maskSend);
-
-                // physics receive
-                ImGui::TableSetColumnIndex(15);
-                ImGui::Text("0x%04X", ch->m_pMotionControl->physicsBody->maskReceive);
+            case Game::CharacterTeam::Skylander: row.Add("Skylander", TableColor::Green);
+                break;
+            case Game::CharacterTeam::Enemy: row.Add("Enemy", TableColor::Red);
+                break;
+            case Game::CharacterTeam::Neutral: row.Add("Neutral", TableColor::Yellow);
+                break;
+            default: row.Dim(Hex(static_cast<uint32_t>(static_cast<int>(ch->m_team))));
+                break;
             }
 
-            ImGui::EndTable();
+            row.Dim(Hex(ch->nameID)); // CRC identifying which character type (Zap, Spyro, troll, etc.)
+
+            if (ch->isPlayer()) row.Add(Fmt("Player %d", ch->contID + 1), TableColor::Green);
+            else if (ch->isEnemy()) row.Add(Fmt("Enemy (0x%X)", ch->nameID), TableColor::Red);
+            else row.Add("Neutral");
+
+            row.Add(Fmt("%.1f", ch->baseHP))
+               .Add(Fmt("%.2f", ch->hpMultiplier))
+               .Add(Fmt("%.2f", ch->attackMultiplier))
+               .Add(Fmt("%.1f", ch->m_fCurrHealth))
+               .Add(Fmt("%.1f", ch->m_fLastRemoveHealth))
+               .Add(Hex(ch->damageRecMask))
+               .Add(Hex(ch->damageRecMaskPrev));
+
+            // which kind of pad controls it
+            if (ch->isPlayer()) row.Add("P");
+            else if (ch->isLocalAI()) row.Add("AI");
+            else if (ch->isRemotePlayer()) row.Add("R");
+            else row.Add("-");
+
+            row.Add(Hex(ch->charExtraBits));
+
+            char bits[33];
+            for (int b = 0; b < 32; b++)
+                bits[31 - b] = (ch->charExtraBits & (1u << b)) ? '1' : '0';
+            bits[32] = '\0';
+            row.Dim(bits);
+
+            row.Add(Fmt("0x%04X", ch->m_pMotionControl->physicsBody->maskSend))
+               .Add(Fmt("0x%04X", ch->m_pMotionControl->physicsBody->maskReceive));
         }
+
+        table.Show("##char_list", ImGuiTableFlags_ScrollY);
     }
 } // namespace ssa::UIPages

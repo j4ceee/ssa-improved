@@ -1,7 +1,8 @@
 #pragma once
 #include <Windows.h>
 #include <d3d9.h>
-
+#include <array>
+#include <memory>
 #include "config.h"
 #include "imgui_impl_dx9.h"
 #include "imgui_impl_win32.h"
@@ -10,6 +11,11 @@
 #include "window_hooks.h"
 #include "texture_mods.h"
 #include "patches.h"
+#include "render_targets.h"
+#include "shader/shader_tracker.h"
+#include "shader/shader_tweaks.h"
+#include "shader/shader_patches.h"
+#include "shader/ui_hider.h"
 #include "game/custom/cinema_skip.h"
 #include "game/custom/difficulty.h"
 #include "game/custom/free_cam.h"
@@ -19,6 +25,7 @@
 #include "game/custom/load_screen.h"
 #include "game/custom/music.h"
 #include "game/custom/skylanderSettings.h"
+#include "game/custom/attack_lights.h"
 
 namespace ssa::D3D9Hooks
 {
@@ -37,6 +44,13 @@ namespace ssa::D3D9Hooks
     using SetScissorRect_t              = HRESULT(WINAPI*)(IDirect3DDevice9*, const RECT*);
     using SetPixelShaderConstantF_t     = HRESULT(WINAPI*)(IDirect3DDevice9*, UINT, const float*, UINT);
     using SetTexture_t                  = HRESULT(WINAPI*)(IDirect3DDevice9*, DWORD, IDirect3DBaseTexture9*);
+    using SetRenderTarget_t             = HRESULT(WINAPI*)(IDirect3DDevice9*, DWORD, IDirect3DSurface9*);
+    using CreatePixelShader_t           = HRESULT(WINAPI*)(IDirect3DDevice9*, const DWORD*, IDirect3DPixelShader9**);
+    using SetPixelShader_t              = HRESULT(WINAPI*)(IDirect3DDevice9*, IDirect3DPixelShader9*);
+    using DrawPrimitive_t               = HRESULT(WINAPI*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, UINT, UINT);
+    using DrawIndexedPrimitive_t        = HRESULT(WINAPI*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, INT, UINT, UINT, UINT, UINT);
+    using DrawPrimitiveUP_t             = HRESULT(WINAPI*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, UINT, const void*, UINT);
+    using DrawIndexedPrimitiveUP_t      = HRESULT(WINAPI*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, UINT, UINT, UINT, const void*, D3DFORMAT, const void*, UINT);
 
     inline Direct3DCreate9_t            orig_Direct3DCreate9            = nullptr;
     inline CreateDevice_t               orig_CreateDevice               = nullptr;
@@ -50,6 +64,13 @@ namespace ssa::D3D9Hooks
     inline SetScissorRect_t             orig_SetScissorRect             = nullptr;
     inline SetPixelShaderConstantF_t    orig_SetPixelShaderConstantF    = nullptr;
     inline SetTexture_t                 orig_SetTexture                 = nullptr;
+    inline SetRenderTarget_t            orig_SetRenderTarget            = nullptr;
+    inline CreatePixelShader_t          orig_CreatePixelShader          = nullptr;
+    inline SetPixelShader_t             orig_SetPixelShader             = nullptr;
+    inline DrawPrimitive_t              orig_DrawPrimitive              = nullptr;
+    inline DrawIndexedPrimitive_t       orig_DrawIndexedPrimitive       = nullptr;
+    inline DrawPrimitiveUP_t            orig_DrawPrimitiveUP            = nullptr;
+    inline DrawIndexedPrimitiveUP_t     orig_DrawIndexedPrimitiveUP     = nullptr;
 
     // -------------------------------------------------------------------------
     // state
@@ -74,23 +95,55 @@ namespace ssa::D3D9Hooks
     inline UINT SsH() { return (UINT)roundf(g_bbHeight * g_config.ssMultiplier); }
     inline UINT ShadowRes() { return static_cast<UINT>(g_config.shadowRes); }
 
+    struct ScaleTier
+    {
+        UINT srcW, srcH; // size the game asks for
+        UINT dstW, dstH; // size we use instead
+        float invSrcW, invSrcH; // 1/src, used to recognise texel-size shader constants
+    };
+
+    inline constexpr size_t kScaleTierCount = 8;
+
+    // Rebuilt only when something feeding it changes. Every viewport, scissor and pixel shader constant upload goes through here, so it must not be recomputed per call.
+    inline const std::array<ScaleTier, kScaleTierCount>& ScaleTiers()
+    {
+        static std::array<ScaleTier, kScaleTierCount> tiers;
+        static UINT keyW = 0, keyH = 0, keyShadow = 0;
+        static float keyScale = -1.f;
+
+        if (keyW != g_bbWidth || keyH != g_bbHeight || keyScale != g_config.ssMultiplier || keyShadow != ShadowRes())
+        {
+            keyW = g_bbWidth;
+            keyH = g_bbHeight;
+            keyScale = g_config.ssMultiplier;
+            keyShadow = ShadowRes();
+
+            const auto make = [](UINT sw, UINT sh, UINT dw, UINT dh)
+            {
+                return ScaleTier{sw, sh, dw, dh, 1.f / sw, 1.f / sh};
+            };
+            tiers = {
+                {
+                    make(k_internalW,       k_internalH,        SsW(),          SsH()           ), // main scene color RT
+                    make(k_internalW / 2,   k_internalH / 2,    SsW() / 2,      SsH() / 2       ), // half-res post-fx
+                    make(k_internalW / 4,   k_internalH / 4,    SsW() / 4,      SsH() / 4       ), // quarter-res downsample + SSAO
+                    make(288,               176,                SsW() / 4,      SsH() / 4       ), // bloom quarter ping-pong
+                    make(144,               96,                 SsW() / 8,      SsH() / 8       ), // bloom eighth blur chain
+                    make(512,               512,                SsSq(512), SsSq(512)  ), // mirror color RT
+                    make(256,               256,                SsSq(256), SsSq(256)  ), // mirror blur/VSM target
+                    make(1024,              1024,               ShadowRes(),    ShadowRes()     ), // shadow maps
+                }
+            };
+        }
+        return tiers;
+    }
+
     inline bool TryScaleDimensions(UINT& w, UINT& h)
     {
-        struct Entry { UINT sw, sh, dw, dh; };
-        const Entry table[] = {
-            { k_internalW,      k_internalH,        SsW(),          SsH()           },  // main scene color RT
-            { k_internalW / 2,  k_internalH / 2,    SsW() / 2,      SsH() / 2       },  // half-res post-fx
-            { k_internalW / 4,  k_internalH / 4,    SsW() / 4,      SsH() / 4       },  // quarter-res downsample + SSAO
-            { 288,              176,                SsW() / 4,      SsH() / 4       },  // bloom quarter ping-pong
-            { 144,              96,                 SsW() / 8,      SsH() / 8       },  // bloom eighth blur chain
-            { 512,              512,                SsSq(512), SsSq(512)  },  // mirror color RT
-            { 256,              256,                SsSq(256), SsSq(256)  },  // mirror blur/VSM target
-            { 1024,             1024,               ShadowRes(),    ShadowRes()     },  // shadow maps
-        };
-        for (const auto& e : table) {
-            if (w == e.sw && h == e.sh) {
-                w = e.dw;
-                h = e.dh;
+        for (const auto& t : ScaleTiers()) {
+            if (w == t.srcW && h == t.srcH) {
+                w = t.dstW;
+                h = t.dstH;
                 return true;
             }
         }
@@ -139,37 +192,38 @@ namespace ssa::D3D9Hooks
     // -------------------------------------------------------------------------
     inline bool FixTexelSizeVec4(float* v)
     {
-        // all internal resolution tiers and their scaled equivalents
-        struct Tier { UINT iW, iH, oW, oH; };
-        const Tier tiers[] = {
-            { k_internalW,      k_internalH,        SsW(),          SsH()           },  // main scene color RT
-            { k_internalW / 2,  k_internalH / 2,    SsW() / 2,      SsH() / 2       },  // half-res post-fx
-            { k_internalW / 4,  k_internalH / 4,    SsW() / 4,      SsH() / 4       },  // quarter-res downsample + SSAO
-            { 288,              176,                SsW() / 4,      SsH() / 4       },  // bloom quarter ping-pong
-            { 144,              96,                 SsW() / 8,      SsH() / 8       },  // bloom eighth blur chain
-            { 512,              512,                SsSq(512), SsSq(512)  },  // mirror color RT
-            { 256,              256,                SsSq(256), SsSq(256)  },  // mirror blur/VSM target
-            { 1024,             1024,               ShadowRes(),    ShadowRes()     },  // shadow maps
-        };
+        // texel sizes are small positive numbers (the largest is 2/96); matrices, colours etc. fail this immediately
+        constexpr float kMaxTexel = 0.025f;
+        for (int i = 0; i < 4; ++i)
+            if (!(v[i] > 0.f && v[i] < kMaxTexel)) return false;
 
         const float eps = 0.01f;
         auto fNear = [&](float a, float b) { return fabsf(a - b) < fabsf(b) * eps; };
 
-        for (const auto& t : tiers) {
-            const float iW = 1.f / t.iW;
-            const float iH = 1.f / t.iH;
+        for (const auto& t : ScaleTiers())
+        {
+            const float iW = t.invSrcW;
+            const float iH = t.invSrcH;
 
             // pattern: (2/W, 2/H, 1/W, 1/H)
-            if (fNear(v[0], 2*iW) && fNear(v[1], 2*iH) && fNear(v[2], iW) && fNear(v[3], iH)) {
-                float nW = 1.f/t.oW, nH = 1.f/t.oH;
-                v[0] = 2*nW; v[1] = 2*nH; v[2] = nW; v[3] = nH;
+            if (fNear(v[0], 2 * iW) && fNear(v[1], 2 * iH) && fNear(v[2], iW) && fNear(v[3], iH))
+            {
+                float nW = 1.f / t.dstW, nH = 1.f / t.dstH;
+                v[0] = 2 * nW;
+                v[1] = 2 * nH;
+                v[2] = nW;
+                v[3] = nH;
                 return true;
             }
 
             // pattern: (1/W, 1/H, 0.5/W, 0.5/H)
-            if (fNear(v[0], iW) && fNear(v[1], iH) && fNear(v[2], .5f*iW) && fNear(v[3], .5f*iH)) {
-                float nW = 1.f/t.oW, nH = 1.f/t.oH;
-                v[0] = nW; v[1] = nH; v[2] = .5f*nW; v[3] = .5f*nH;
+            if (fNear(v[0], iW) && fNear(v[1], iH) && fNear(v[2], .5f * iW) && fNear(v[3], .5f * iH))
+            {
+                float nW = 1.f / t.dstW, nH = 1.f / t.dstH;
+                v[0] = nW;
+                v[1] = nH;
+                v[2] = .5f * nW;
+                v[3] = .5f * nH;
                 return true;
             }
         }
@@ -180,46 +234,65 @@ namespace ssa::D3D9Hooks
     // -------------------------------------------------------------------------
     // Hook: SetPixelShaderConstantF - patches texel-size uniforms for nativeRes
     // -------------------------------------------------------------------------
-    inline HRESULT WINAPI hook_SetPixelShaderConstantF(
-        IDirect3DDevice9* pDevice, UINT StartRegister, const float* pData, UINT Vector4fCount)
+    inline HRESULT WINAPI hook_SetPixelShaderConstantF(IDirect3DDevice9* pDevice, UINT StartRegister, const float* pData, UINT Vector4fCount)
     {
-        if (g_config.renderRes && g_bbWidth > 0 && g_bbHeight > 0) {
-            // stack-allocate for small batches (typical), heap for large ones
-            float  stackBuf[32 * 4];
-            float* patched = (Vector4fCount <= 32)
-                ? stackBuf
-                : new float[Vector4fCount * 4];
+        if (!pData)
+            return orig_SetPixelShaderConstantF(pDevice, StartRegister, pData, Vector4fCount);
 
-            memcpy(patched, pData, Vector4fCount * 4 * sizeof(float));
+        const float* forwarded = pData;
+        float stackBuf[32 * 4]; // small batches (typical) stay on the stack
+        std::unique_ptr<float[]> heapBuf; // large ones go to the heap
 
-            bool any = false;
+        if (g_config.renderRes && g_bbWidth > 0 && g_bbHeight > 0)
+        {
+            // most batches contain nothing to patch, so the batch is only copied once the first match shows up
+            float* patched = nullptr;
             for (UINT i = 0; i < Vector4fCount; i++)
-                if (FixTexelSizeVec4(patched + i * 4)) any = true;
+            {
+                float v[4];
+                memcpy(v, pData + i * 4, sizeof(v));
+                if (!FixTexelSizeVec4(v)) continue;
 
-            HRESULT hr = orig_SetPixelShaderConstantF(pDevice, StartRegister,
-                any ? patched : pData, Vector4fCount);
-
-            if (Vector4fCount > 32) delete[] patched;
-            return hr;
+                if (!patched)
+                {
+                    if (Vector4fCount <= 32)
+                    {
+                        patched = stackBuf;
+                    }
+                    else
+                    {
+                        heapBuf.reset(new float[Vector4fCount * 4]);
+                        patched = heapBuf.get();
+                    }
+                    memcpy(patched, pData, Vector4fCount * 4 * sizeof(float));
+                }
+                memcpy(patched + i * 4, v, sizeof(v));
+            }
+            if (patched) forwarded = patched;
         }
-        return orig_SetPixelShaderConstantF(pDevice, StartRegister, pData, Vector4fCount);
+
+        ShaderTweaks::NoteConstants(StartRegister, forwarded, Vector4fCount);
+        return orig_SetPixelShaderConstantF(pDevice, StartRegister, forwarded, Vector4fCount);
     }
 
     // -------------------------------------------------------------------------
     // Hook: CreateTexture - scale internal scene RTs to backbuffer size & clear texture replacement pointers
     // -------------------------------------------------------------------------
-    inline HRESULT WINAPI hook_CreateTexture(
-        IDirect3DDevice9* pDevice, UINT Width, UINT Height, UINT Levels,
-        DWORD Usage, D3DFORMAT Format, D3DPOOL Pool,
-        IDirect3DTexture9** ppTexture, HANDLE* pSharedHandle)
+    inline HRESULT WINAPI hook_CreateTexture(IDirect3DDevice9* pDevice, UINT Width, UINT Height, UINT Levels,
+        DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, IDirect3DTexture9** ppTexture, HANDLE* pSharedHandle)
     {
+        const UINT reqW = Width, reqH = Height; // what the game asked for, before scaling
+
         if ((Usage & D3DUSAGE_RENDERTARGET) && g_config.renderRes && g_bbWidth > 0 && g_bbHeight > 0)
             TryScaleDimensions(Width, Height);
 
         HRESULT hr = orig_CreateTexture(pDevice, Width, Height, Levels, Usage, Format, Pool, ppTexture, pSharedHandle);
 
         if (SUCCEEDED(hr) && ppTexture && *ppTexture)
+        {
             TextureMods::g_ptrToHash.erase(*ppTexture); // evict any stale entry at this address
+            RenderTargets::OnTextureCreated(*ppTexture, reqW, reqH, Usage);
+        }
 
         return hr;
     }
@@ -227,16 +300,21 @@ namespace ssa::D3D9Hooks
     // -------------------------------------------------------------------------
     // Hook: CreateDepthStencilSurface - scale internal depth surfaces
     // -------------------------------------------------------------------------
-    inline HRESULT WINAPI hook_CreateDepthStencilSurface(
-        IDirect3DDevice9* pDevice, UINT Width, UINT Height,
-        D3DFORMAT Format, D3DMULTISAMPLE_TYPE MultiSample, DWORD MultisampleQuality,
-        BOOL Discard, IDirect3DSurface9** ppSurface, HANDLE* pSharedHandle)
+    inline HRESULT WINAPI hook_CreateDepthStencilSurface(IDirect3DDevice9* pDevice, UINT Width, UINT Height,
+        D3DFORMAT Format, D3DMULTISAMPLE_TYPE MultiSample, DWORD MultisampleQuality, BOOL Discard,
+        IDirect3DSurface9** ppSurface, HANDLE* pSharedHandle)
     {
+        const UINT reqW = Width, reqH = Height;
+
         if (g_config.renderRes && g_bbWidth > 0 && g_bbHeight > 0)
             TryScaleDimensions(Width, Height);
 
-        return orig_CreateDepthStencilSurface(pDevice, Width, Height, Format,
-            MultiSample, MultisampleQuality, Discard, ppSurface, pSharedHandle);
+        HRESULT hr = orig_CreateDepthStencilSurface(pDevice, Width, Height, Format, MultiSample, MultisampleQuality, Discard, ppSurface, pSharedHandle);
+
+        if (SUCCEEDED(hr) && ppSurface && *ppSurface)
+            RenderTargets::OnDepthSurfaceCreated(*ppSurface, reqW, reqH);
+
+        return hr;
     }
 
     // -------------------------------------------------------------------------
@@ -273,17 +351,114 @@ namespace ssa::D3D9Hooks
     }
 
     // -------------------------------------------------------------------------
+    // Hook: SetRenderTarget - track render target changes
+    // -------------------------------------------------------------------------
+    inline HRESULT WINAPI hook_SetRenderTarget(IDirect3DDevice9* pDevice, DWORD RenderTargetIndex, IDirect3DSurface9* pRenderTarget)
+    {
+        const HRESULT hr = orig_SetRenderTarget(pDevice, RenderTargetIndex, pRenderTarget);
+
+        if (SUCCEEDED(hr) && RenderTargetIndex == 0)
+            UiHider::g_rt0.store(pRenderTarget, std::memory_order_relaxed);
+
+        if (SUCCEEDED(hr) && pRenderTarget && RenderTargets::g_tracking)
+            RenderTargets::OnSetRenderTarget(RenderTargetIndex, pRenderTarget);
+
+        return hr;
+    }
+
+    inline HRESULT WINAPI hook_CreatePixelShader(IDirect3DDevice9* pDevice, const DWORD* pFunction, IDirect3DPixelShader9** ppShader)
+    {
+        const HRESULT hr = orig_CreatePixelShader(pDevice, pFunction, ppShader);
+        if (SUCCEEDED(hr) && ppShader && *ppShader)
+            ShaderTracker::OnPixelShaderCreated(*ppShader, pFunction);
+        return hr;
+    }
+
+    inline HRESULT WINAPI hook_SetPixelShader(IDirect3DDevice9* pDevice, IDirect3DPixelShader9* pShader)
+    {
+        // game may hand one of our patched shaders back to us; everything below must see the game's original object
+        pShader = ShaderPatches::ToGame(pShader);
+
+        // game's water / light shaders are swapped for our patched copy at bind time, everything below keeps seeing the original
+        const HRESULT hr = orig_SetPixelShader(pDevice, ShaderPatches::Resolve(pDevice, pShader));
+        if (SUCCEEDED(hr))
+        {
+            ShaderTracker::g_curPS.store(pShader, std::memory_order_relaxed);
+            ShaderTweaks::OnSetPixelShader(pShader);
+        }
+        return hr;
+    }
+
+    // draw calls that must not be executed: shaders hidden in the diagnostics window, and the in-game UI when it is switched off
+    inline bool ShouldSkipDraw()
+    {
+        return ShaderTracker::ShouldSkipDraw() || UiHider::ShouldSkipDraw(ShaderTracker::g_curPS.load(std::memory_order_relaxed));
+    }
+
+    // everything that has to happen right before a draw call: constants for the shader patches and the constant tweaks.
+    // Returns what ShaderTweaks::PostDraw has to put back afterwards.
+    inline ShaderTweaks::Restore BeforeDraw(IDirect3DDevice9* d)
+    {
+        const void* ps = ShaderTracker::g_curPS.load(std::memory_order_relaxed);
+
+        // at most one of the two applies to a given shader
+        if (ShaderTweaks::Restore patch = ShaderPatches::PreDraw(d, ps); patch.n)
+            return patch;
+        return ShaderTweaks::PreDraw(d);
+    }
+
+    // steps shared by all four draw calls; `draw` performs the actual call and returns its HRESULT
+    template <class DrawFn>
+    inline HRESULT HookedDraw(IDirect3DDevice9* d, DrawFn&& draw)
+    {
+        if (ShouldSkipDraw()) return D3D_OK;
+        if (RenderTargets::g_tracking) ShaderTracker::OnDraw();
+        const ShaderTweaks::Restore restore = BeforeDraw(d);
+        const HRESULT hr = draw();
+        ShaderTweaks::PostDraw(d, restore);
+        return hr;
+    }
+
+    inline HRESULT WINAPI hook_DrawPrimitive(IDirect3DDevice9* d, D3DPRIMITIVETYPE type, UINT start, UINT count)
+    {
+        return HookedDraw(d, [&] { return orig_DrawPrimitive(d, type, start, count); });
+    }
+
+    inline HRESULT WINAPI hook_DrawIndexedPrimitive(IDirect3DDevice9* d, D3DPRIMITIVETYPE type, INT baseVertex, UINT minVertex, UINT numVertices, UINT startIndex, UINT primCount)
+    {
+        return HookedDraw(d, [&] {
+            return orig_DrawIndexedPrimitive(d, type, baseVertex, minVertex, numVertices, startIndex, primCount);
+        });
+    }
+
+    inline HRESULT WINAPI hook_DrawPrimitiveUP(IDirect3DDevice9* d, D3DPRIMITIVETYPE type, UINT count, const void* data, UINT stride)
+    {
+        return HookedDraw(d, [&] { return orig_DrawPrimitiveUP(d, type, count, data, stride); });
+    }
+
+    inline HRESULT WINAPI hook_DrawIndexedPrimitiveUP(IDirect3DDevice9* d, D3DPRIMITIVETYPE type, UINT minVertex, UINT numVertices, UINT primCount, const void* indexData,
+                                                      D3DFORMAT indexFormat, const void* vertexData, UINT stride)
+    {
+        return HookedDraw(d, [&] {
+            return orig_DrawIndexedPrimitiveUP(d, type, minVertex, numVertices, primCount, indexData, indexFormat, vertexData, stride);
+        });
+    }
+
+    // -------------------------------------------------------------------------
     // Hook: SetTexture - handle texture replacement
     // -------------------------------------------------------------------------
     inline HRESULT WINAPI hook_SetTexture(IDirect3DDevice9* pDevice, DWORD Stage, IDirect3DBaseTexture9* pTex)
     {
+        RenderTargets::NoteStageTexture(Stage, pTex);
+        if (pTex && RenderTargets::g_tracking)
+            RenderTargets::OnSetTexture(pTex);
+
         if (pTex && (g_config.textureMods || g_config.textureDump || g_config.textureCycler))
         {
             pTex = TextureMods::HandleSetTexture(pDevice, Stage, pTex);
         }
         return orig_SetTexture(pDevice, Stage, pTex);
     }
-
 
     // -------------------------------------------------------------------------
     // Hook: SetSamplerState - anisotropic filtering + LOD bias
@@ -341,6 +516,10 @@ namespace ssa::D3D9Hooks
             Game::LoadScreenFix::Update();
             return orig_Present(pDevice, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
         }
+
+        RenderTargets::OnPresent();
+        ShaderTracker::OnPresent();
+        UiHider::OnPresent();
 
         // skip limiter if vsync is on & cap is at or above the refresh rate (vsync already does the job in that case)
         bool limiterRedundant = g_config.vsync && g_displayRefreshHz > 0 && g_config.fpsCap >= g_displayRefreshHz;
@@ -425,6 +604,7 @@ namespace ssa::D3D9Hooks
         Game::ItemMods::Update();
         Game::FreeCam::Update();
         Game::Music::Update();
+        Game::AttackLights::Update();
 
         return orig_Present(pDevice, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
     }
@@ -466,7 +646,9 @@ namespace ssa::D3D9Hooks
             // 4. finalize and render ImGui to the screen
             ImGui::Render();
             ImGui::EndFrame();
+            UiHider::g_inOverlay = true; // the mod's own overlay must never be hidden
             ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+            UiHider::g_inOverlay = false;
         }
 
         // 5. call original EndScene
@@ -485,6 +667,9 @@ namespace ssa::D3D9Hooks
             ImGui_ImplDX9_InvalidateDeviceObjects();
         }
 
+        ShaderTracker::OnReset();
+        UiHider::OnReset();
+        RenderTargets::OnReset();
         TextureMods::OnReset();
 
         HRESULT hr = orig_Reset(pDevice, pp);
@@ -539,12 +724,19 @@ namespace ssa::D3D9Hooks
                     {17,    (void*)&hook_Present,                   (void**)&orig_Present,                  "Present"                   },
                     {23,    (void*)&hook_CreateTexture,             (void**)&orig_CreateTexture,            "CreateTexture"             },
                     {29,    (void*)&hook_CreateDepthStencilSurface, (void**)&orig_CreateDepthStencilSurface,"CreateDepthStencilSurface" },
+                    {37,    (void*)&hook_SetRenderTarget,           (void**)&orig_SetRenderTarget,          "SetRenderTarget"           },
                     {42,    (void*)&hook_EndScene,                  (void**)&orig_EndScene,                 "EndScene"                  },
                     {47,    (void*)&hook_SetViewport,               (void**)&orig_SetViewport,              "SetViewport"               },
                     {65,    (void*)&hook_SetTexture,                (void**)&orig_SetTexture,               "SetTexture"                },
                     {69,    (void*)&hook_SetSamplerState,           (void**)&orig_SetSamplerState,          "SetSamplerState"           },
                     {75,    (void*)&hook_SetScissorRect,            (void**)&orig_SetScissorRect,           "SetScissorRect"            },
                     {109,   (void*)&hook_SetPixelShaderConstantF,   (void**)&orig_SetPixelShaderConstantF,  "SetPixelShaderConstantF"   },
+                    {81,    (void*)&hook_DrawPrimitive,             (void**)&orig_DrawPrimitive,            "DrawPrimitive"             },
+                    {82,    (void*)&hook_DrawIndexedPrimitive,      (void**)&orig_DrawIndexedPrimitive,     "DrawIndexedPrimitive"      },
+                    {83,    (void*)&hook_DrawPrimitiveUP,           (void**)&orig_DrawPrimitiveUP,          "DrawPrimitiveUP"           },
+                    {84,    (void*)&hook_DrawIndexedPrimitiveUP,    (void**)&orig_DrawIndexedPrimitiveUP,   "DrawIndexedPrimitiveUP"    },
+                    {106,   (void*)&hook_CreatePixelShader,         (void**)&orig_CreatePixelShader,        "CreatePixelShader"         },
+                    {107,   (void*)&hook_SetPixelShader,            (void**)&orig_SetPixelShader,           "SetPixelShader"            },
                 };
 
                 bool allOk = true;
@@ -557,6 +749,9 @@ namespace ssa::D3D9Hooks
                         allOk = false;
                     }
                 }
+
+                ShaderTweaks::g_setPSConstF = orig_SetPixelShaderConstantF;
+                ShaderPatcher::g_createPS = orig_CreatePixelShader;
 
                 s_device_hooked = true; // always, even on partial failure
                 if (!allOk)

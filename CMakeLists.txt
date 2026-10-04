@@ -82,6 +82,61 @@ target_sources(xinput1_3 PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/generated/resource.rc
 )
 
+#
+# HLSL shaders
+# - every src/shader/hlsl/*.hlsl is a pixel shader (entry point main) that fxc compiles when the mod is built.
+# - bytecode is embedded into the DLL as byte arrays; nothing is compiled while the game runs. *.hlsli files are includes
+# - a listing of every shader is written to <build dir>/generated/shaders/<name>.asm.
+#
+find_program(FXC_EXECUTABLE fxc HINTS "$ENV{WindowsSdkVerBinPath}/x86" "$ENV{WindowsSdkVerBinPath}/x64")
+if(NOT FXC_EXECUTABLE)
+    # not in a developer prompt: take the newest Windows SDK
+    file(GLOB FXC_CANDIDATES "C:/Program Files (x86)/Windows Kits/10/bin/*/x86/fxc.exe")
+    list(SORT FXC_CANDIDATES)
+    list(REVERSE FXC_CANDIDATES)
+    if(FXC_CANDIDATES)
+        list(GET FXC_CANDIDATES 0 FXC_EXECUTABLE)
+    endif()
+endif()
+if(NOT FXC_EXECUTABLE)
+    message(FATAL_ERROR "fxc.exe (the HLSL compiler of the Windows SDK) was not found. Install the Windows SDK or pass -DFXC_EXECUTABLE=<path to fxc.exe>.")
+endif()
+message(STATUS "HLSL compiler: ${FXC_EXECUTABLE}")
+
+file(GLOB HLSL_SHADERS CONFIGURE_DEPENDS "src/shader/hlsl/*.hlsl")
+file(GLOB HLSL_INCLUDES CONFIGURE_DEPENDS "src/shader/hlsl/*.hlsli")
+set(SHADER_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/shaders)
+
+set(SHADER_BYTECODE "")
+foreach(SHADER ${HLSL_SHADERS})
+    get_filename_component(SHADER_NAME ${SHADER} NAME_WE)
+    set(SHADER_BIN ${SHADER_DIR}/${SHADER_NAME}.bin)
+    add_custom_command(
+        OUTPUT ${SHADER_BIN}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_DIR}
+        # ps_3_0, optimisation level 3, real flow control for the loops and branches, row major matrices
+        COMMAND ${FXC_EXECUTABLE} /nologo /T ps_3_0 /E main /O3 /Gfp /Zpr /Fo ${SHADER_BIN} /Fc ${SHADER_DIR}/${SHADER_NAME}.asm ${SHADER}
+        DEPENDS ${SHADER} ${HLSL_INCLUDES}
+        COMMENT "Compiling ${SHADER_NAME}.hlsl"
+        VERBATIM
+    )
+    list(APPEND SHADER_BYTECODE ${SHADER_BIN})
+endforeach()
+
+string(REPLACE ";" "|" SHADER_BYTECODE_ARG "${SHADER_BYTECODE}")
+set(SHADER_EMBED_CPP ${CMAKE_CURRENT_BINARY_DIR}/generated/compiled_shaders.cpp)
+add_custom_command(
+    OUTPUT ${SHADER_EMBED_CPP}
+    COMMAND ${CMAKE_COMMAND} "-DOUTPUT=${SHADER_EMBED_CPP}" "-DFILES=${SHADER_BYTECODE_ARG}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_shaders.cmake
+    DEPENDS ${SHADER_BYTECODE} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_shaders.cmake
+    COMMENT "Embedding compiled shaders"
+    VERBATIM
+)
+# the HLSL files are listed so the IDE shows them, the build system must not compile them itself
+set_source_files_properties(${HLSL_SHADERS} ${HLSL_INCLUDES} PROPERTIES HEADER_FILE_ONLY TRUE VS_TOOL_OVERRIDE "None")
+target_sources(xinput1_3 PRIVATE ${SHADER_EMBED_CPP} ${HLSL_SHADERS} ${HLSL_INCLUDES})
+
 target_link_libraries(xinput1_3 PRIVATE
     minhook
     hid         # for HidD_* function signatures

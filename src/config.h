@@ -25,6 +25,12 @@ namespace ssa
         bool renderRes = true; // should game render at chosen / native resolution internally?
         float ssMultiplier = 1.0f; // supersampling: 1.0 = off, 1.5 = 1.5x, 2.0 = 2x SSAA
         int shadowRes = 2048; // shadow map size: 2048 = default; 1024, 2048, 4096
+        float dofStrength = 0.5f; // depth of field strength: 0 = off, 1 = vanilla, 0.5 = default
+        float fogStrength = 0.6f; // fog / haze strength: 0 = off, 1 = vanilla, 0.6 = default
+        bool waterReflections = true; // screen-space reflections on water (player, enemies, level), false = vanilla water
+        bool attackLights = true; // dynamic lights on projectile attacks that have none (see Game::AttackLights), false = vanilla lighting
+        bool lightShadows = true; // screen-space shadows for dynamic lights (see OmniLightPatch), false = lights cast no shadows like in vanilla
+        bool softSunShadows = true; // contact-hardening soft sun shadows (see SunLightPatch), false = the game's fixed-width shadow filter
         int anisotropy = 8; // 1, 2, 4, 8, 16
 
         int textureSharpness = 10; // 0 = off, 10 = default, 20 = max (maps to lodBias internally)
@@ -70,6 +76,9 @@ namespace ssa
         bool removeEdgeGuards = false;
 
         bool textureCycler = false;
+
+        // hide the normal in-game UI (player status etc.) during gameplay, see UiHider
+        bool hideUi = false;
 
         bool p1GodMode = false;
         bool p1NoKnockback = false;
@@ -123,6 +132,12 @@ namespace ssa
         LogF("[Config] FpsCap: %d", g_config.fpsCap);
         LogF("[Config] Supersampling multiplier: %.1f", g_config.ssMultiplier);
         LogF("[Config] Shadow resolution: %d", g_config.shadowRes);
+        LogF("[Config] Depth of field strength: %.2f", g_config.dofStrength);
+        LogF("[Config] Fog strength: %.2f", g_config.fogStrength);
+        LogF("[Config] Better water: %d", g_config.waterReflections);
+        LogF("[Config] Attack lights: %d", g_config.attackLights);
+        LogF("[Config] Light shadows: %d", g_config.lightShadows);
+        LogF("[Config] Soft sun shadows: %d", g_config.softSunShadows);
         LogF("[Config] Texture sharpness: %d (LOD bias: %.1f)", g_config.textureSharpness, g_config.lodBias);
         LogF("[Config] Disable grass: %d", g_config.disableGrass);
         LogF("[Config] HP multiplier: %.2f", g_config.hpMult);
@@ -185,6 +200,18 @@ namespace ssa
             L"; Shadow map resolution (requires RenderRes=1) (2048 = default, valid: 1024, 2048, 4096)\n"
             L"; Higher values give sharper shadows but use more VRAM and GPU time.\n"
             L"ShadowResolution=%d\n"
+            L"; Depth of field (the haze/blur on distant objects) strength (0.0 = off, 1.0 = vanilla)\n"
+            L"DepthOfFieldStrength=%.2f\n"
+            L"; Fog / haze strength (0.0 = no fog, 1.0 = vanilla)\n"
+            L"FogStrength=%.2f\n"
+            L"; Adds screen space reflections, caustics and foam to water bodies (0 = vanilla water, 1 = enabled (default))\n"
+            L"BetterWater=%d\n"
+            L"; Adds dynamic lights to projectile attacks that have none in the original game (0 = vanilla lighting, 1 = enabled (default))\n"
+            L"AttackLights=%d\n"
+            L"; Screen-space shadows for dynamic lights, e.g. from attacks and torches (0 = disabled, 1 = enabled (default))\n"
+            L"LightShadows=%d\n"
+            L"; Soft sun shadows that are sharp where an object touches the ground and get softer with distance (0 = the game's fixed-width shadows (default), 1 = enabled)\n"
+            L"SoftSunShadows=%d\n"
             L"; Anisotropic filtering level (1 = off, valid: 1/2/4/8/16)\n"
             L"Anisotropy=%d\n"
             L"; Texture sharpness (0 = off, 10 = default, 20 = maximum)\n"
@@ -253,6 +280,12 @@ namespace ssa
             static_cast<int>(g_config.renderRes),
             g_config.ssMultiplier,
             g_config.shadowRes,
+            g_config.dofStrength,
+            g_config.fogStrength,
+            static_cast<int>(g_config.waterReflections),
+            static_cast<int>(g_config.attackLights),
+            static_cast<int>(g_config.lightShadows),
+            static_cast<int>(g_config.softSunShadows),
             g_config.anisotropy,
             g_config.textureSharpness,
 
@@ -349,6 +382,13 @@ namespace ssa
         else if (shadowRes <= 2048) shadowRes = 2048;
         else shadowRes = 4096;
         g_config.shadowRes = shadowRes;
+
+        g_config.dofStrength = std::max(0.0f, std::min(1.0f, getFloat(L"Graphics", L"DepthOfFieldStrength", 0.5f)));
+        g_config.fogStrength = std::max(0.0f, std::min(1.0f, getFloat(L"Graphics", L"FogStrength", 0.6f)));
+        g_config.waterReflections = getInt(L"Graphics", L"WaterReflections", 1) != 0;
+        g_config.attackLights = getInt(L"Graphics", L"AttackLights", 1) != 0;
+        g_config.softSunShadows = getInt(L"Graphics", L"SoftSunShadows", 1) != 0;
+        g_config.lightShadows = getInt(L"Graphics", L"LightShadows", 1) != 0;
 
         int anisotropy = getInt(L"Graphics", L"Anisotropy", 8);
         // clamp to nearest valid level
@@ -459,6 +499,42 @@ namespace ssa
         else if (value <= 2048) value = 2048;
         else value = 4096;
         g_config.shadowRes = value;
+        SaveConfig();
+    }
+
+    inline void SetDofStrength(float value)
+    {
+        g_config.dofStrength = std::max(0.0f, std::min(1.0f, value));
+        SaveConfig();
+    }
+
+    inline void SetFogStrength(float value)
+    {
+        g_config.fogStrength = std::max(0.0f, std::min(1.0f, value));
+        SaveConfig();
+    }
+
+    inline void EnableWaterReflections(bool value)
+    {
+        g_config.waterReflections = value;
+        SaveConfig();
+    }
+
+    inline void EnableAttackLights(bool value)
+    {
+        g_config.attackLights = value;
+        SaveConfig();
+    }
+
+    inline void EnableLightShadows(bool value)
+    {
+        g_config.lightShadows = value;
+        SaveConfig();
+    }
+
+    inline void EnableSoftSunShadows(bool value)
+    {
+        g_config.softSunShadows = value;
         SaveConfig();
     }
 

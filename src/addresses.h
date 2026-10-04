@@ -24,11 +24,18 @@ namespace ssa
 
         RUINS_STATE, // int32, hub stage (1-6) cached by lux::GetSpyroRuinsState
 
+        // dynamic lights
+        LIGHT_FACTORY,
+        SHARED_CTRL_ON_STRONG_ZERO,
+        SHARED_CTRL_ON_WEAK_ZERO,
+
         MOUSE_DEVICE,
         // VTables
         PLAYER_PAD_VTABLE,
         AI_PAD_VTABLE,
         REMOTE_PAD_VTABLE,
+        LIGHT_VTABLE,
+        PROJECTILE_VTABLE,
         PAD_STATE_ARRAY,
 
         // sound system stuff

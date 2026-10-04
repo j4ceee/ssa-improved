@@ -10,6 +10,7 @@
 namespace ssa::Game
 {
     struct Character;
+    struct EntityObject;
 
     struct CharacterRef
     {
@@ -83,7 +84,8 @@ namespace ssa::Game
         // AnimEntity
         char            _pad0[0x00C];       // +0x000
         void*           m_pObject;          // +0x00C entity object ptr
-        char            _pad1a[0x0D0];      // +0x010
+        void*           m_pObjectCtrl;      // +0x010 control block of the shared_ptr the engine holds the entity object with
+        char            _pad1a[0x0CC];      // +0x014
         uint32_t        attackStage;        // +0x0E0 1 = active attack
         char            _pad1c[0x034];      // +0x0E4
         void*           m_pAnimStateInterface; // +0x118
@@ -130,6 +132,12 @@ namespace ssa::Game
         static List<CharacterRef>* instanceCharactersList()
         {
             return reinterpret_cast<List<CharacterRef>*>(GetAddress(CHARACTER_LIST_ALL));
+        }
+
+        // entity object together with its shared_ptr control block (for code that needs a reference to the object)
+        [[nodiscard]] SharedPtr<EntityObject> objectRef() const
+        {
+            return { static_cast<EntityObject*>(m_pObject), m_pObjectCtrl };
         }
 
         [[nodiscard]] PhysicsObject* physicsBody() const
@@ -230,6 +238,8 @@ namespace ssa::Game
         void healToFull() { m_fCurrHealth = maxHP(); }
     };
     static_assert(offsetof(Character, m_pObject) == 0x00C);
+    static_assert(offsetof(Character, m_pObjectCtrl) == 0x010);
+    static_assert(offsetof(Character, attackStage) == 0x0E0);
     static_assert(offsetof(Character, m_pAttributes) == 0x11C);
     static_assert(offsetof(Character, nameID) == 0x15C);
     static_assert(offsetof(Character, contID) == 0x184);

@@ -136,3 +136,23 @@ struct SharedPtr
     void* ctrl;
 };
 static_assert(sizeof(SharedPtr<int>) == 8);
+
+// WeakPtr -------------------------------------------------------------------------------------------------------------
+template <typename T>
+struct WeakPtr
+{
+    T* ptr;
+    void* ctrl;
+};
+static_assert(sizeof(WeakPtr<int>) == 8);
+
+// SharedControl -------------------------------------------------------------------------------------------------------
+// control block behind ltl2::shared_ptr / weak_ptr (the ctrl pointer of SharedPtr / WeakPtr)
+struct SharedControl
+{
+    void* vtable; // +0x00
+    volatile long strong; // +0x04 strong refs, <= 0 once the object is gone
+    volatile long weak; // +0x08 weak refs (bit 31 = atomic mode), all strong refs together hold one of them
+    void* object; // +0x0C
+};
+static_assert(sizeof(SharedControl) == 16);
