@@ -72,6 +72,7 @@ namespace ssa::D3D9Hooks
     inline UINT SsSq(UINT base) { return (UINT)roundf(base * g_config.ssMultiplier); }
     inline UINT SsW() { return (UINT)roundf(g_bbWidth  * g_config.ssMultiplier); }
     inline UINT SsH() { return (UINT)roundf(g_bbHeight * g_config.ssMultiplier); }
+    inline UINT ShadowRes() { return static_cast<UINT>(g_config.shadowRes); }
 
     inline bool TryScaleDimensions(UINT& w, UINT& h)
     {
@@ -84,6 +85,7 @@ namespace ssa::D3D9Hooks
             { 144,              96,                 SsW() / 8,      SsH() / 8       },  // bloom eighth blur chain
             { 512,              512,                SsSq(512), SsSq(512)  },  // mirror color RT
             { 256,              256,                SsSq(256), SsSq(256)  },  // mirror blur/VSM target
+            { 1024,             1024,               ShadowRes(),    ShadowRes()     },  // shadow maps
         };
         for (const auto& e : table) {
             if (w == e.sw && h == e.sh) {
@@ -147,6 +149,7 @@ namespace ssa::D3D9Hooks
             { 144,              96,                 SsW() / 8,      SsH() / 8       },  // bloom eighth blur chain
             { 512,              512,                SsSq(512), SsSq(512)  },  // mirror color RT
             { 256,              256,                SsSq(256), SsSq(256)  },  // mirror blur/VSM target
+            { 1024,             1024,               ShadowRes(),    ShadowRes()     },  // shadow maps
         };
 
         const float eps = 0.01f;

@@ -180,10 +180,29 @@ namespace ssa::UIPages
                 ImGui::SameLine();
                 UI::HelpMarker(
                     "Renders the scene at a higher internal resolution and downscales. Higher values cost significantly more GPU.",
-                    "Requires game restart");
+                    "Requires game restart & High-Res Rendering");
             }
             ImGui::EndDisabled();
 
+            // Shadow resolution
+            ImGui::BeginDisabled(!g_config.renderRes);
+            {
+                const int shadowLevels[] = {1024, 2048, 4096};
+                const char* shadowLabels[] = {"Vanilla (1024)", "High (2048)", "Ultra (4096)"};
+                int currentShadowIndex = 0;
+                for (int i = 0; i < 3; i++)
+                {
+                    if (g_config.shadowRes >= shadowLevels[i])
+                        currentShadowIndex = i;
+                }
+                if (ImGui::Combo("Shadow Resolution", &currentShadowIndex, shadowLabels, 3))
+                    SetShadowResolution(shadowLevels[currentShadowIndex]);
+                ImGui::SameLine();
+                UI::HelpMarker(
+                    "Resolution of the game's shadow maps. Higher values give sharper shadows but use more VRAM and GPU time.",
+                    "Requires game restart & High-Res Rendering");
+            }
+            ImGui::EndDisabled();
 
             ImGui::Spacing();
             ImGui::SeparatorText("Window");

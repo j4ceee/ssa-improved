@@ -24,6 +24,7 @@ namespace ssa
         int fpsCap = 0; // 0 = unlimited
         bool renderRes = true; // should game render at chosen / native resolution internally?
         float ssMultiplier = 1.0f; // supersampling: 1.0 = off, 1.5 = 1.5x, 2.0 = 2x SSAA
+        int shadowRes = 2048; // shadow map size: 2048 = default; 1024, 2048, 4096
         int anisotropy = 8; // 1, 2, 4, 8, 16
 
         int textureSharpness = 10; // 0 = off, 10 = default, 20 = max (maps to lodBias internally)
@@ -121,6 +122,7 @@ namespace ssa
         LogF("[Config] VSync: %d", g_config.vsync);
         LogF("[Config] FpsCap: %d", g_config.fpsCap);
         LogF("[Config] Supersampling multiplier: %.1f", g_config.ssMultiplier);
+        LogF("[Config] Shadow resolution: %d", g_config.shadowRes);
         LogF("[Config] Texture sharpness: %d (LOD bias: %.1f)", g_config.textureSharpness, g_config.lodBias);
         LogF("[Config] Disable grass: %d", g_config.disableGrass);
         LogF("[Config] HP multiplier: %.2f", g_config.hpMult);
@@ -180,6 +182,9 @@ namespace ssa
             L"; Supersampling multiplier (requires RenderRes=1) (1.0 = off (default), valid: 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0))\n"
             L"; Multiplies the internal render resolution for improved image quality and scales the image down to your chosen / desktop resolution.\n"
             L"Supersampling=%.1f\n"
+            L"; Shadow map resolution (requires RenderRes=1) (2048 = default, valid: 1024, 2048, 4096)\n"
+            L"; Higher values give sharper shadows but use more VRAM and GPU time.\n"
+            L"ShadowResolution=%d\n"
             L"; Anisotropic filtering level (1 = off, valid: 1/2/4/8/16)\n"
             L"Anisotropy=%d\n"
             L"; Texture sharpness (0 = off, 10 = default, 20 = maximum)\n"
@@ -247,6 +252,7 @@ namespace ssa
             g_config.fpsCap,
             static_cast<int>(g_config.renderRes),
             g_config.ssMultiplier,
+            g_config.shadowRes,
             g_config.anisotropy,
             g_config.textureSharpness,
 
@@ -337,6 +343,12 @@ namespace ssa
         else if (ss <= 3.5f) ss = 3.5f;
         else ss = 4.0f;
         g_config.ssMultiplier = ss;
+
+        int shadowRes = getInt(L"Graphics", L"ShadowResolution", 2048);
+        if (shadowRes <= 1024) shadowRes = 1024;
+        else if (shadowRes <= 2048) shadowRes = 2048;
+        else shadowRes = 4096;
+        g_config.shadowRes = shadowRes;
 
         int anisotropy = getInt(L"Graphics", L"Anisotropy", 8);
         // clamp to nearest valid level
@@ -438,6 +450,15 @@ namespace ssa
         else if (multiplier <= 3.5f) multiplier = 3.5f;
         else multiplier = 4.0f;
         g_config.ssMultiplier = multiplier;
+        SaveConfig();
+    }
+
+    inline void SetShadowResolution(int value)
+    {
+        if (value <= 1024) value = 1024;
+        else if (value <= 2048) value = 2048;
+        else value = 4096;
+        g_config.shadowRes = value;
         SaveConfig();
     }
 
