@@ -47,7 +47,6 @@
 - Supersampling (up to 4x) (renders the game at a higher resolution and then downscales it to the display resolution)
 - Anisotropic filtering (up to 16x)
 - Texture sharpness control
-- Grass rendering toggle (disabling grass rendering brings major performance improvements in areas with high foliage density)
 
 ### Texture mods
 - Custom textures can be loaded from the `ssa-improved/textures` folder

@@ -53,8 +53,6 @@
   - [FPS Cap](#fps)
   - [Anisotropic Filtering](#af)
   - [Texture Sharpness](#sharpness)
-- [Performance](#performance)
-  - [Disable Grass](#grass)
 
 </details>
 
@@ -138,9 +136,3 @@ _Note: These settings can be changed in the current play session. Each player ha
 | <h4><a id="fps" name="fps"></a>FPS Cap</h4>                        | `Settings` → `Graphics` → `FPS Cap`                   | Controls the maximum frames per second the game will display.                                                                                                                                                                                                              | `0` (Uncapped) | Key: `FpsCap`<br>Values: Positive #s or `0`                                     |
 | <h4><a id="af" name="af"></a>Anisotropic Filtering</h4>            | `Settings` → `Graphics` → `Anisotropic Filtering`     | Improves the clarity of textures viewed at oblique angles. Higher levels provide better quality but may reduce performance on older GPUs.                                                                                                                                  | `8`            | Key: `Anisotropy`<br>Values: `1`, `2`, `4`, `8`, `16`                           |
 | <h4><a id="sharpness" name="sharpness"></a>Texture Sharpness</h4>  | `Settings` → `Graphics` → `Texture Sharpness`         | Adjusts the sharpness of distant textures. Higher levels may cause shimmering or aliasing on certain textures.                                                                                                                                                             | `10`           | Key: `TextureSharpness`<br>Values: `0` - `20`                                   |
-
-## Performance
-
-| Setting                                               | UI Location                                  | Description                                                                                                                                                                                                              | Default          | Config                                   |
-|-------------------------------------------------------|----------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|------------------------------------------|
-| <h4><a id="grass" name="grass"></a>Disable Grass</h4> | `Settings` → `Performance` → `Disable Grass` | The game renders grass quite inefficiently which causes major performance drops. This setting prevents grass patches from rendering, which will bring major performance improvements in areas with high foliage density. | `0` (No changes) | Key: `DisableGrass`<br>Values: `0` / `1` |

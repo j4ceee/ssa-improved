@@ -36,9 +36,6 @@ namespace ssa
         int textureSharpness = 10; // 0 = off, 10 = default, 20 = max (maps to lodBias internally)
         float lodBias = -1.0f; // derived from textureSharpness, do not set directly
 
-        // Performance
-        bool disableGrass = false; // prevents grass patches from rendering
-
         // Game
         bool emulatedPortal = false; // if true, the physical portal is ignored and all portal interactions are emulated in software (see portal/backend/EmulatedBackend.h)
         bool emulatedPortalStartup = false; // value of emulated portal during startup (should be used everywhere where emulated portal needs to be checked)
@@ -139,7 +136,6 @@ namespace ssa
         LogF("[Config] Light shadows: %d", g_config.lightShadows);
         LogF("[Config] Soft sun shadows: %d", g_config.softSunShadows);
         LogF("[Config] Texture sharpness: %d (LOD bias: %.1f)", g_config.textureSharpness, g_config.lodBias);
-        LogF("[Config] Disable grass: %d", g_config.disableGrass);
         LogF("[Config] HP multiplier: %.2f", g_config.hpMult);
         LogF("[Config] Damage multiplier: %.2f", g_config.dmgMult);
         LogF("[Config] Enemy hit reaction: %d", g_config.enemyHitReaction);
@@ -217,11 +213,6 @@ namespace ssa
             L"; Texture sharpness (0 = off, 10 = default, 20 = maximum)\n"
             L"TextureSharpness=%d\n"
             L"\n"
-            L"[Performance]\n"
-            L"; Disable grass rendering (0 = grass is rendered (default), 1 = grass is not rendered)\n"
-            L"; Disabling grass rendering brings major performance improvements in areas with high foliage density\n"
-            L"DisableGrass=%d\n"
-            L"\n"
             L"[Game]\n"
             L"; Use a fully emulated portal instead of a physical USB device (0 = disabled (default), 1 = enabled)\n"
             L"; When enabled, all other portal backends are ignored. Manage figures via the Portal tab in the mod menu.\n"
@@ -288,9 +279,6 @@ namespace ssa
             static_cast<int>(g_config.softSunShadows),
             g_config.anisotropy,
             g_config.textureSharpness,
-
-            // Performance
-            static_cast<int>(g_config.disableGrass),
 
             // Game
             static_cast<int>(g_config.emulatedPortal),
@@ -403,9 +391,6 @@ namespace ssa
         sharpness = std::max(0, std::min(20, sharpness));
         g_config.textureSharpness = sharpness;
         g_config.lodBias = -(sharpness * 0.1f);
-
-        // Performance
-        g_config.disableGrass = getInt(L"Performance", L"DisableGrass", 0) != 0;
 
         // Game
         g_config.emulatedPortal = getInt(L"Game", L"EmulatedPortal", 0) != 0;
@@ -555,12 +540,6 @@ namespace ssa
         sharpness = std::max(0, std::min(20, sharpness));
         g_config.textureSharpness = sharpness;
         g_config.lodBias = -(sharpness * 0.1f);
-        SaveConfig();
-    }
-
-    inline void DisableGrass(bool value)
-    {
-        g_config.disableGrass = value;
         SaveConfig();
     }
 

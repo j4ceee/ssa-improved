@@ -142,31 +142,6 @@ namespace ssa::UIPages
         ImGui::Spacing();
         ImGui::Spacing();
 
-        // Performance
-        // -----------------------------------------------------------------------------------------------------
-        if (ImGui::CollapsingHeader(ICON_MD_MONITOR_HEART " Performance", ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            ImGui::Spacing();
-
-            // toggle grass
-            bool grassDisabled = g_config.disableGrass;
-            if (ImGui::Checkbox("Disable Grass", &grassDisabled))
-            {
-                DisableGrass(grassDisabled);
-            }
-            ImGui::SameLine();
-            UI::HelpMarker("Prevents grass patches from rendering, which will bring major performance improvements in areas with high foliage density.",
-                "Disabling this requires reloading the current level before grass becomes visible again.");
-
-            UI::StartDisabledText();
-            ImGui::TextWrapped("Rendered grass areas: %d", *static_cast<int*>(GetAddress(GRASS_COUNT)));
-            UI::EndDisabledText();
-        }
-
-        ImGui::Spacing();
-        ImGui::Spacing();
-        ImGui::Spacing();
-
         // Restart Required
         // -----------------------------------------------------------------------------------------------------
         if (ImGui::CollapsingHeader(ICON_MD_DANGEROUS " Further options"))

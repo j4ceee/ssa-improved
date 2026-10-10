@@ -1,5 +1,7 @@
 #include <imgui.h>
+#include "addresses.h"
 #include "game/custom/difficulty.h"
+#include "game/custom/constant_lookup.h"
 #include "game/game.h"
 #include "game/magic_item_manager.h"
 #include "game/mp_game.h"
@@ -9,6 +11,7 @@
 #include "imgui/ui.h"
 #include "imgui/ui_pages/diagnostics/debug_table.h"
 #include "imgui/fonts/IconsMaterialDesign.h"
+#include "window/state_cache.h"
 #include "window/texture_mods.h"
 
 namespace ssa::UIPages
@@ -111,8 +114,70 @@ namespace ssa::UIPages
         }
     }
 
+    void RenderStateCacheDiagnostics()
+    {
+        if (!ImGui::TreeNode("D3D State Cache"))
+            return;
+        ImGui::Indent();
+
+        ImGui::Checkbox("Drop redundant state calls", &StateCache::g_enabled);
+        ImGui::SameLine();
+        UI::HelpMarker("Skips SetRenderState / SetSamplerState / shader constant calls that set the value the device already has.\n"
+            "Turn it off to compare FPS or if something renders wrong.");
+
+        uint32_t seen = 0, filtered = 0;
+        for (int i = 0; i < StateCache::KindCount; ++i)
+        {
+            const StateCache::Counter& c = StateCache::g_last[i];
+            seen += c.seen;
+            filtered += c.filtered;
+            ImGui::TextDisabled("%s: %u calls, %u dropped (%.0f%%)",
+                                StateCache::KindName(static_cast<StateCache::Kind>(i)),
+                                c.seen, c.filtered, c.seen > 0 ? 100.0 * c.filtered / c.seen : 0.0);
+        }
+        ImGui::TextDisabled("Total: %u calls, %u dropped (%.0f%%)", seen, filtered,
+                            seen > 0 ? 100.0 * filtered / seen : 0.0);
+
+        ImGui::Unindent();
+        ImGui::TreePop();
+    }
+
+    void RenderConstantLookupDiagnostics()
+    {
+        if (!ImGui::TreeNode("Fast Constant Lookup (SecuROM)"))
+            return;
+        ImGui::Indent();
+
+        namespace CL = Game::ConstantLookup;
+        if (!CL::g_available)
+        {
+            ImGui::TextDisabled("Not available: the thunk or the pointer slot is not as expected (see the log)");
+        }
+        else
+        {
+            ImGui::Checkbox("Replace the game's constant lookup", &CL::g_enabled);
+            ImGui::SameLine();
+            UI::HelpMarker("The game's shader constant lookup runs through SecuROM's obfuscated code and takes microseconds per call. "
+                "This points its pointer slot at an equivalent function of the mod.");
+            ImGui::Checkbox("Verify against the game's function", &CL::g_verify);
+            ImGui::SameLine();
+            UI::HelpMarker(
+                "Runs the game's own function as well and compares. On a difference the game's result is used. Slower, for testing only.");
+            if (CL::g_verify)
+                ImGui::TextDisabled("Compared: %u, mismatches: %u", CL::g_verified.load(), CL::g_mismatches.load());
+            ImGui::TextDisabled("Slot 0x%08X -> %p (game function: %p)", static_cast<unsigned>(CL::Slot()),
+                                *reinterpret_cast<void* const*>(CL::Slot()), CL::g_original);
+        }
+
+        ImGui::Unindent();
+        ImGui::TreePop();
+    }
+
     void RenderDiagnosticWindow()
     {
+        RenderConstantLookupDiagnostics();
+        RenderStateCacheDiagnostics();
+
         if (ImGui::TreeNode("Game"))
         {
             ImGui::Indent();

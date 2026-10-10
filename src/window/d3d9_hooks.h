@@ -10,6 +10,7 @@
 #include "MinHook.h"
 #include "window_hooks.h"
 #include "texture_mods.h"
+#include "state_cache.h"
 #include "patches.h"
 #include "render_targets.h"
 #include "shader/shader_tracker.h"
@@ -17,9 +18,9 @@
 #include "shader/shader_patches.h"
 #include "shader/ui_hider.h"
 #include "game/custom/cinema_skip.h"
+#include "game/custom/constant_lookup.h"
 #include "game/custom/difficulty.h"
 #include "game/custom/free_cam.h"
-#include "game/custom/grassPatch.h"
 #include "game/custom/items.h"
 #include "game/custom/jump.h"
 #include "game/custom/load_screen.h"
@@ -51,6 +52,10 @@ namespace ssa::D3D9Hooks
     using DrawIndexedPrimitive_t        = HRESULT(WINAPI*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, INT, UINT, UINT, UINT, UINT);
     using DrawPrimitiveUP_t             = HRESULT(WINAPI*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, UINT, const void*, UINT);
     using DrawIndexedPrimitiveUP_t      = HRESULT(WINAPI*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, UINT, UINT, UINT, const void*, D3DFORMAT, const void*, UINT);
+    using SetRenderState_t              = HRESULT(WINAPI*)(IDirect3DDevice9*, D3DRENDERSTATETYPE, DWORD);
+    using SetVertexShaderConstantF_t    = HRESULT(WINAPI*)(IDirect3DDevice9*, UINT, const float*, UINT);
+    using SetVertexShaderConstantB_t    = HRESULT(WINAPI*)(IDirect3DDevice9*, UINT, const BOOL*, UINT);
+    using SetPixelShaderConstantB_t     = HRESULT(WINAPI*)(IDirect3DDevice9*, UINT, const BOOL*, UINT);
 
     inline Direct3DCreate9_t            orig_Direct3DCreate9            = nullptr;
     inline CreateDevice_t               orig_CreateDevice               = nullptr;
@@ -71,6 +76,10 @@ namespace ssa::D3D9Hooks
     inline DrawIndexedPrimitive_t       orig_DrawIndexedPrimitive       = nullptr;
     inline DrawPrimitiveUP_t            orig_DrawPrimitiveUP            = nullptr;
     inline DrawIndexedPrimitiveUP_t     orig_DrawIndexedPrimitiveUP     = nullptr;
+    inline SetRenderState_t             orig_SetRenderState             = nullptr;
+    inline SetVertexShaderConstantF_t   orig_SetVertexShaderConstantF   = nullptr;
+    inline SetVertexShaderConstantB_t   orig_SetVertexShaderConstantB   = nullptr;
+    inline SetPixelShaderConstantB_t    orig_SetPixelShaderConstantB    = nullptr;
 
     // -------------------------------------------------------------------------
     // state
@@ -231,6 +240,14 @@ namespace ssa::D3D9Hooks
         return false;
     }
 
+    // result of a state call that was forwarded to D3D: a failure means the device may not have taken the value the state cache assumed
+    inline HRESULT Forwarded(HRESULT hr)
+    {
+        if (FAILED(hr))
+            StateCache::Invalidate();
+        return hr;
+    }
+
     // -------------------------------------------------------------------------
     // Hook: SetPixelShaderConstantF - patches texel-size uniforms for nativeRes
     // -------------------------------------------------------------------------
@@ -272,7 +289,41 @@ namespace ssa::D3D9Hooks
         }
 
         ShaderTweaks::NoteConstants(StartRegister, forwarded, Vector4fCount);
-        return orig_SetPixelShaderConstantF(pDevice, StartRegister, forwarded, Vector4fCount);
+
+        if (StateCache::RedundantPsConstF(StartRegister, forwarded, Vector4fCount))
+            return D3D_OK;
+        return Forwarded(orig_SetPixelShaderConstantF(pDevice, StartRegister, forwarded, Vector4fCount));
+    }
+
+    // -------------------------------------------------------------------------
+    // Hooks: render state and the remaining shader constant calls - only here to drop repeats (see state_cache.h)
+    // -------------------------------------------------------------------------
+    inline HRESULT WINAPI hook_SetRenderState(IDirect3DDevice9* pDevice, D3DRENDERSTATETYPE State, DWORD Value)
+    {
+        if (StateCache::RedundantRenderState(State, Value))
+            return D3D_OK;
+        return Forwarded(orig_SetRenderState(pDevice, State, Value));
+    }
+
+    inline HRESULT WINAPI hook_SetVertexShaderConstantF(IDirect3DDevice9* pDevice, UINT StartRegister, const float* pData, UINT Vector4fCount)
+    {
+        if (StateCache::RedundantVsConstF(StartRegister, pData, Vector4fCount))
+            return D3D_OK;
+        return Forwarded(orig_SetVertexShaderConstantF(pDevice, StartRegister, pData, Vector4fCount));
+    }
+
+    inline HRESULT WINAPI hook_SetVertexShaderConstantB(IDirect3DDevice9* pDevice, UINT StartRegister, const BOOL* pData, UINT BoolCount)
+    {
+        if (StateCache::RedundantVsConstB(StartRegister, pData, BoolCount))
+            return D3D_OK;
+        return Forwarded(orig_SetVertexShaderConstantB(pDevice, StartRegister, pData, BoolCount));
+    }
+
+    inline HRESULT WINAPI hook_SetPixelShaderConstantB(IDirect3DDevice9* pDevice, UINT StartRegister, const BOOL* pData, UINT BoolCount)
+    {
+        if (StateCache::RedundantPsConstB(StartRegister, pData, BoolCount))
+            return D3D_OK;
+        return Forwarded(orig_SetPixelShaderConstantB(pDevice, StartRegister, pData, BoolCount));
     }
 
     // -------------------------------------------------------------------------
@@ -416,6 +467,8 @@ namespace ssa::D3D9Hooks
         const ShaderTweaks::Restore restore = BeforeDraw(d);
         const HRESULT hr = draw();
         ShaderTweaks::PostDraw(d, restore);
+        if (restore.n)
+            StateCache::InvalidatePsConstF(); // the mod changed pixel shader constants behind the state cache
         return hr;
     }
 
@@ -463,6 +516,14 @@ namespace ssa::D3D9Hooks
     // -------------------------------------------------------------------------
     // Hook: SetSamplerState - anisotropic filtering + LOD bias
     // -------------------------------------------------------------------------
+    // every sampler state write of the mod goes through here, so the state cache sees all of them
+    inline HRESULT SetSamplerStateCached(IDirect3DDevice9* pDevice, DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD Value)
+    {
+        if (StateCache::RedundantSamplerState(Sampler, Type, Value))
+            return D3D_OK;
+        return Forwarded(orig_SetSamplerState(pDevice, Sampler, Type, Value));
+    }
+
     inline HRESULT WINAPI hook_SetSamplerState(IDirect3DDevice9* pDevice, DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD Value)
     {
         if (g_config.anisotropy > 1) {
@@ -470,8 +531,8 @@ namespace ssa::D3D9Hooks
                 // sampler 2 causes green & red tint artifacts (pixels) with AF
                 // this leaves some textures (like a ground grass texture in the hub) without AF, but better like this than the artifacts
                 if (Sampler != 2) {
-                    orig_SetSamplerState(pDevice, Sampler, D3DSAMP_MAXANISOTROPY, (DWORD)g_config.anisotropy);
-                    orig_SetSamplerState(pDevice, Sampler, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+                    SetSamplerStateCached(pDevice, Sampler, D3DSAMP_MAXANISOTROPY, (DWORD)g_config.anisotropy);
+                    SetSamplerStateCached(pDevice, Sampler, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
                     Value = D3DTEXF_ANISOTROPIC;
                 }
             }
@@ -484,7 +545,7 @@ namespace ssa::D3D9Hooks
 
         if (g_config.lodBias < 0.0f) {
             if (Type == D3DSAMP_MINFILTER && Value >= D3DTEXF_POINT)
-                orig_SetSamplerState(pDevice, Sampler, D3DSAMP_MIPMAPLODBIAS,
+                SetSamplerStateCached(pDevice, Sampler, D3DSAMP_MIPMAPLODBIAS,
                     *reinterpret_cast<const DWORD*>(&g_config.lodBias));
 
             // prevent game from downgrading
@@ -495,7 +556,7 @@ namespace ssa::D3D9Hooks
             }
         }
 
-        return orig_SetSamplerState(pDevice, Sampler, Type, Value);
+        return SetSamplerStateCached(pDevice, Sampler, Type, Value);
     }
 
     // -------------------------------------------------------------------------
@@ -520,6 +581,7 @@ namespace ssa::D3D9Hooks
         RenderTargets::OnPresent();
         ShaderTracker::OnPresent();
         UiHider::OnPresent();
+        StateCache::OnPresent();
 
         // skip limiter if vsync is on & cap is at or above the refresh rate (vsync already does the job in that case)
         bool limiterRedundant = g_config.vsync && g_displayRefreshHz > 0 && g_config.fpsCap >= g_displayRefreshHz;
@@ -596,7 +658,7 @@ namespace ssa::D3D9Hooks
             InitDeferredHooks();
 
         // game "hooks", SecuROM is like "nuh-uh" for actual hooks, so let's modify data instead >:)
-        Game::GrassPatch::ApplyGrassPatch();
+        Game::ConstantLookup::Update();
         Game::Difficulty::Update();
         Game::CinemaSkip::Update();
         Game::SkylanderSettings::Update();
@@ -649,6 +711,7 @@ namespace ssa::D3D9Hooks
             UiHider::g_inOverlay = true; // the mod's own overlay must never be hidden
             ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
             UiHider::g_inOverlay = false;
+            StateCache::Invalidate(); // the ImGui backend changes device state and restores it behind the hooks
         }
 
         // 5. call original EndScene
@@ -672,7 +735,9 @@ namespace ssa::D3D9Hooks
         RenderTargets::OnReset();
         TextureMods::OnReset();
 
+        StateCache::Invalidate();
         HRESULT hr = orig_Reset(pDevice, pp);
+        StateCache::Invalidate();
 
         // tell ImGui to rebuild its DirectX resources after the reset succeeds
         if (SUCCEEDED(hr) && g_imgui_initialized && ImGui::GetCurrentContext() != nullptr) {
@@ -693,6 +758,8 @@ namespace ssa::D3D9Hooks
         HRESULT hr = orig_CreateDevice(pD3D, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pp, ppDevice);
 
         if (SUCCEEDED(hr) && ppDevice && *ppDevice) {
+            Log("[D3D9] Device behavior flags: 0x%08lX", BehaviorFlags);
+
             // save display refresh rate
             if (g_displayRefreshHz == 0) {
                 D3DDISPLAYMODE mode;
@@ -707,6 +774,7 @@ namespace ssa::D3D9Hooks
                 g_mainThreadId = GetCurrentThreadId();
                 Log("[D3D9] Main render thread: %lu", g_mainThreadId);
             }
+            StateCache::g_ownerThread = g_mainThreadId;
 
             static bool s_device_hooked = false;
             if (!s_device_hooked) {
@@ -737,6 +805,10 @@ namespace ssa::D3D9Hooks
                     {84,    (void*)&hook_DrawIndexedPrimitiveUP,    (void**)&orig_DrawIndexedPrimitiveUP,   "DrawIndexedPrimitiveUP"    },
                     {106,   (void*)&hook_CreatePixelShader,         (void**)&orig_CreatePixelShader,        "CreatePixelShader"         },
                     {107,   (void*)&hook_SetPixelShader,            (void**)&orig_SetPixelShader,           "SetPixelShader"            },
+                    {57,    (void*)&hook_SetRenderState,            (void**)&orig_SetRenderState,           "SetRenderState"            },
+                    {94,    (void*)&hook_SetVertexShaderConstantF,  (void**)&orig_SetVertexShaderConstantF, "SetVertexShaderConstantF" },
+                    {98,    (void*)&hook_SetVertexShaderConstantB,  (void**)&orig_SetVertexShaderConstantB, "SetVertexShaderConstantB" },
+                    {113,   (void*)&hook_SetPixelShaderConstantB,   (void**)&orig_SetPixelShaderConstantB,  "SetPixelShaderConstantB"  },
                 };
 
                 bool allOk = true;

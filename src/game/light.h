@@ -44,12 +44,11 @@ namespace ssa::Game
         // engine clears Component::self when it deletes the light (owner teardown, expiry, level change)
         [[nodiscard]] bool isDeleted() const { return !base.self.ptr; }
 
-        // Light::Delete (vtable slot 1): unlinks the light from its owner and the light lists, drops the engine's own reference
+        // Light::Delete: unlinks the light from its owner and the light lists, drops the engine's own reference
         // object stays valid as long as someone holds a strong reference, but must not be deleted twice
         void destroy()
         {
-            const auto* vtable = static_cast<const uintptr_t*>(GetAddress(LIGHT_VTABLE));
-            meow_hook::func_call<void>(vtable[1], this);
+            meow_hook::func_call<void>(reinterpret_cast<uintptr_t>(GetAddress(LIGHT_DELETE)), this);
         }
 
         // lux::Light::LightFromLX: parses the definition behind `browser`, builds a light on context.owner and returns it (null on failure)

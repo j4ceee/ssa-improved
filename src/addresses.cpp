@@ -21,14 +21,17 @@ namespace ssa
         g_Address[CHARACTER_LIST] = 0x00ca2a54;
         g_Address[CHARACTER_LIST_ALL] = 0x00ca2a48;
         g_Address[TARGETING_LIST] = 0x00e3ddf0;
-        g_Address[GRASS_COUNT] = 0x00d9146c; // number of grass patches to draw (probably / maybe?)
         g_Address[DEFAULT_FOV] = 0x00cbc7f0; // default field of view (used for active camera)
 
         g_Address[RUINS_STATE] = 0x00d8594c; // hub stage (1-6) cached by lux::GetSpyroRuinsState
 
         g_Address[LIGHT_FACTORY] = 0x00981c60; // lux::Light::LightFromLX
+        g_Address[LIGHT_DELETE] = 0x0097d0d0; // lux::Light::Delete
         g_Address[SHARED_CTRL_ON_STRONG_ZERO] = 0x0099d8e0;
         g_Address[SHARED_CTRL_ON_WEAK_ZERO] = 0x0099d890;
+
+        g_Address[CONSTANT_LOOKUP_THUNK] = 0x004297b0; // ltl2::binary_search<Shader::ConstantQuery*, crc32>, JMP [slot]
+        g_Address[CONSTANT_LOOKUP_SLOT] = 0x01db9218; // SecuROM's pointer to the body of the function above
 
         g_Address[JOY_POLL_RETURN] = 0x009476CD;
         g_Address[MOUSE_DEVICE] = 0x00ca29e0; // DirectInput mouse device pointer
@@ -54,8 +57,6 @@ namespace ssa
         // g_Address[POLL_M_KB] = 0x00945df0; // loops infinitely in the background, no MinHook detouring!!
         // g_Address[UPDATE_MOUSE] = 0x009471a0;
         // g_Address[UPDATE_KEYBOARD] = 0x00946570;
-        //
-        // g_Address[GRASS_DRAW_ALL] = 0x00985c30;
         //
         // g_Address[SHEEP] = 0x00a30330; // sheep
     }

@@ -19,15 +19,19 @@ namespace ssa
         CHARACTER_LIST, // Skylanders Character instances only
         CHARACTER_LIST_ALL, // all Character instances (enemies + players + neutral)
         TARGETING_LIST,
-        GRASS_COUNT,
         DEFAULT_FOV,
 
         RUINS_STATE, // int32, hub stage (1-6) cached by lux::GetSpyroRuinsState
 
         // dynamic lights
         LIGHT_FACTORY,
+        LIGHT_DELETE, // lux::Light::Delete (thiscall, vtable slot 1)
         SHARED_CTRL_ON_STRONG_ZERO,
         SHARED_CTRL_ON_WEAK_ZERO,
+
+        // SecuROM moved the game's shader constant lookup into its own code, see game/custom/constant_lookup.h
+        CONSTANT_LOOKUP_THUNK, // stub in .text: JMP [CONSTANT_LOOKUP_SLOT]
+        CONSTANT_LOOKUP_SLOT, // pointer to the function body, plain data in the .securom section
 
         JOY_POLL_RETURN,
         MOUSE_DEVICE,
@@ -54,9 +58,6 @@ namespace ssa
         // POLL_M_KB, // infinite background loop polling inputs
         // UPDATE_MOUSE, // mouse input handler
         // UPDATE_KEYBOARD, // keyboard input handler
-        //
-        // // grass drawing
-        // GRASS_DRAW_ALL,
         //
         // // sheep
         // SHEEP, // sheep
