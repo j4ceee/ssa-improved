@@ -29,6 +29,7 @@ namespace ssa
         SHARED_CTRL_ON_STRONG_ZERO,
         SHARED_CTRL_ON_WEAK_ZERO,
 
+        JOY_POLL_RETURN,
         MOUSE_DEVICE,
         // VTables
         PLAYER_PAD_VTABLE,

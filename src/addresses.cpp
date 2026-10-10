@@ -30,6 +30,7 @@ namespace ssa
         g_Address[SHARED_CTRL_ON_STRONG_ZERO] = 0x0099d8e0;
         g_Address[SHARED_CTRL_ON_WEAK_ZERO] = 0x0099d890;
 
+        g_Address[JOY_POLL_RETURN] = 0x009476CD;
         g_Address[MOUSE_DEVICE] = 0x00ca29e0; // DirectInput mouse device pointer
         // VTables
         g_Address[PLAYER_PAD_VTABLE] = 0x00bb6414;

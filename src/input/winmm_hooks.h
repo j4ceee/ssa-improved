@@ -1,6 +1,7 @@
 #pragma once
 #include <Windows.h>
 #include <mmsystem.h>
+#include "addresses.h"
 #include "MinHook.h"
 #include "log.h"
 #include "imgui/ui.h"
@@ -13,7 +14,7 @@ namespace ssa::WinmmHooks
     // returning any nonzero value causes FUN_009475f0 to goto past the entire controller input block
     inline MMRESULT WINAPI hook_joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji)
     {
-        if (UI::Get()->IsVisible())
+        if (UI::Get()->IsVisible() && _ReturnAddress() == GetAddress(JOY_POLL_RETURN))
             return JOYERR_PARMS;
         return orig_joyGetPosEx(uJoyID, pji);
     }
