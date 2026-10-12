@@ -1,7 +1,11 @@
 #include <imgui.h>
+#include <algorithm>
+#include <iterator>
 #include "addresses.h"
 #include "game/custom/difficulty.h"
 #include "securom/constant_lookup.h"
+#include "securom/lua_tables.h"
+#include "securom/render_list.h"
 #include "game/game.h"
 #include "game/magic_item_manager.h"
 #include "game/mp_game.h"
@@ -115,6 +119,85 @@ namespace ssa::UIPages
         }
     }
 
+    void RenderLuaTablesDiagnostics()
+    {
+        if (!ImGui::TreeNode("Fast Lua Table Access (SecuROM)"))
+            return;
+        ImGui::Indent();
+
+        namespace LT = Game::LuaTables;
+        const auto patchRow = [](Securom::SlotPatch& patch, const char* label, const LT::VerifyCounters& verify)
+        {
+            if (!patch.available())
+            {
+                ImGui::TextDisabled("%s: not available (see the log)", label);
+                return;
+            }
+            ImGui::Checkbox(label, &patch.enabled);
+            ImGui::TextDisabled("    slot 0x%08X -> %p (game function: %p)", static_cast<unsigned>(patch.slot()),
+                                *reinterpret_cast<void* const*>(patch.slot()), patch.original());
+            if (LT::g_verify)
+                ImGui::TextDisabled("    compared: %u, mismatches: %u", verify.compared.load(), verify.mismatches.load());
+        };
+
+        patchRow(LT::g_getStr, "Replace luaH_getstr", LT::g_getStrVerify);
+        patchRow(LT::g_getTable, "Replace luaV_gettable", LT::g_getTableVerify);
+        ImGui::SameLine();
+        UI::HelpMarker("The game's Lua table lookups run through SecuROM's obfuscated code and cost many times what they do.\n"
+            "These point their pointer slots at equivalent functions of the mod.");
+
+        ImGui::Checkbox("Verify against the game's functions", &LT::g_verify);
+        ImGui::SameLine();
+        UI::HelpMarker("Runs the game's own functions as well and compares. On a difference the game's result is used. Slower, for testing only.");
+        uint32_t passedOn = 0;
+        for (const uint32_t count : LT::g_passedOn)
+            passedOn += count;
+        const uint32_t total = LT::g_getTableDone + passedOn;
+        ImGui::TextDisabled("luaV_gettable: %u done here, %u passed on to the game's function (%.1f%%)", LT::g_getTableDone, passedOn,
+                            total > 0 ? 100.0 * passedOn / total : 0.0);
+        for (size_t i = 0; i < std::size(LT::g_passedOn); ++i)
+            ImGui::TextDisabled("    %s: %u", LT::kPassedOnNames[i], LT::g_passedOn[i]);
+        if (ImGui::Button("Reset counters"))
+        {
+            LT::g_getTableDone = 0;
+            std::fill(std::begin(LT::g_passedOn), std::end(LT::g_passedOn), 0u);
+        }
+
+        ImGui::Unindent();
+        ImGui::TreePop();
+    }
+
+    void RenderRenderListDiagnostics()
+    {
+        if (!ImGui::TreeNode("Fast Render List Push (SecuROM)"))
+            return;
+        ImGui::Indent();
+
+        namespace RL = Game::RenderList;
+        if (!RL::g_patch.available())
+        {
+            ImGui::TextDisabled("Not available: the thunk or the pointer slot is not as expected (see the log)");
+        }
+        else
+        {
+            ImGui::Checkbox("Replace the render list push", &RL::g_patch.enabled);
+            ImGui::SameLine();
+            UI::HelpMarker("Adding an item to the NGL scene's render list runs through SecuROM's obfuscated code. "
+                           "This does the three steps the game's function does.\n");
+            ImGui::TextDisabled("    slot 0x%08X -> %p (game function: %p)", static_cast<unsigned>(RL::g_patch.slot()),
+                                *reinterpret_cast<void* const*>(RL::g_patch.slot()), RL::g_patch.original());
+            ImGui::Checkbox("Verify against the game's function", &RL::g_verify);
+            ImGui::SameLine();
+            UI::HelpMarker("Runs the game's own functions as well and compares. On a difference the game's result is used. Slower, for testing only.");
+            if (RL::g_verify)
+                ImGui::TextDisabled("    compared: %u, mismatches: %u", RL::g_verifyCounters.compared.load(),
+                                    RL::g_verifyCounters.mismatches.load());
+        }
+
+        ImGui::Unindent();
+        ImGui::TreePop();
+    }
+
     void RenderStateCacheDiagnostics()
     {
         if (!ImGui::TreeNode("D3D State Cache"))
@@ -150,24 +233,24 @@ namespace ssa::UIPages
         ImGui::Indent();
 
         namespace CL = Game::ConstantLookup;
-        if (!CL::g_available)
+        if (!CL::g_patch.available())
         {
             ImGui::TextDisabled("Not available: the thunk or the pointer slot is not as expected (see the log)");
         }
         else
         {
-            ImGui::Checkbox("Replace the game's constant lookup", &CL::g_enabled);
+            ImGui::Checkbox("Replace the game's constant lookup", &CL::g_patch.enabled);
             ImGui::SameLine();
             UI::HelpMarker("The game's shader constant lookup runs through SecuROM's obfuscated code and takes microseconds per call. "
                 "This points its pointer slot at an equivalent function of the mod.");
             ImGui::Checkbox("Verify against the game's function", &CL::g_verify);
             ImGui::SameLine();
-            UI::HelpMarker(
-                "Runs the game's own function as well and compares. On a difference the game's result is used. Slower, for testing only.");
+            UI::HelpMarker("Runs the game's own functions as well and compares. On a difference the game's result is used. Slower, for testing only.");
             if (CL::g_verify)
-                ImGui::TextDisabled("Compared: %u, mismatches: %u", CL::g_verified.load(), CL::g_mismatches.load());
-            ImGui::TextDisabled("Slot 0x%08X -> %p (game function: %p)", static_cast<unsigned>(CL::Slot()),
-                                *reinterpret_cast<void* const*>(CL::Slot()), CL::g_original);
+                ImGui::TextDisabled("Compared: %u, mismatches: %u", CL::g_verifyCounters.compared.load(),
+                                    CL::g_verifyCounters.mismatches.load());
+            ImGui::TextDisabled("Slot 0x%08X -> %p (game function: %p)", static_cast<unsigned>(CL::g_patch.slot()),
+                                *reinterpret_cast<void* const*>(CL::g_patch.slot()), CL::g_patch.original());
         }
 
         ImGui::Unindent();
@@ -195,6 +278,8 @@ namespace ssa::UIPages
     void RenderDiagnosticWindow()
     {
         RenderConstantLookupDiagnostics();
+        RenderLuaTablesDiagnostics();
+        RenderRenderListDiagnostics();
         RenderStateCacheDiagnostics();
         RenderAsyncReadbackDiagnostics();
 

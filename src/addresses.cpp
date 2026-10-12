@@ -33,6 +33,16 @@ namespace ssa
         g_Address[CONSTANT_LOOKUP_THUNK] = 0x004297b0; // ltl2::binary_search<Shader::ConstantQuery*, crc32>, JMP [slot]
         g_Address[CONSTANT_LOOKUP_SLOT] = 0x01db9218; // SecuROM's pointer to the body of the function above
 
+        g_Address[LUA_NIL_OBJECT] = 0x00ba8dc8;
+        g_Address[LUA_GETTABLE_THUNK] = 0x0041b540;
+        g_Address[LUA_GETTABLE_SLOT] = 0x01db8bf0;
+        g_Address[LUA_GETSTR_THUNK] = 0x00419540;
+        g_Address[LUA_GETSTR_SLOT] = 0x01db9e58;
+
+        g_Address[NGL_SCENE] = 0x00d85b6c;
+        g_Address[RENDER_LIST_PUSH_THUNK] = 0x0043de80;
+        g_Address[RENDER_LIST_PUSH_SLOT] = 0x01db7ed0;
+
         g_Address[READBACK_LOCK_RETURN] = 0x00966206;
 
         g_Address[JOY_POLL_RETURN] = 0x009476CD;

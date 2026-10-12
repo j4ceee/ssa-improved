@@ -19,7 +19,9 @@
 #include "shader/shader_patches.h"
 #include "shader/ui_hider.h"
 #include "game/custom/cinema_skip.h"
-#include "../securom/constant_lookup.h"
+#include "securom/constant_lookup.h"
+#include "securom/lua_tables.h"
+#include "securom/render_list.h"
 #include "game/custom/difficulty.h"
 #include "game/custom/free_cam.h"
 #include "game/custom/items.h"
@@ -665,6 +667,8 @@ namespace ssa::D3D9Hooks
 
         // game "hooks", SecuROM is like "nuh-uh" for actual hooks, so let's modify data instead >:)
         Game::ConstantLookup::Update();
+        Game::LuaTables::Update();
+        Game::RenderList::Update();
         Game::Difficulty::Update();
         Game::CinemaSkip::Update();
         Game::SkylanderSettings::Update();
