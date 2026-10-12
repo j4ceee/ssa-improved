@@ -30,6 +30,7 @@
 #include "game/custom/music.h"
 #include "game/custom/skylanderSettings.h"
 #include "game/custom/attack_lights.h"
+#include "game/custom/skylanderMovement.h"
 
 namespace ssa::D3D9Hooks
 {
@@ -672,6 +673,7 @@ namespace ssa::D3D9Hooks
         Game::Difficulty::Update();
         Game::CinemaSkip::Update();
         Game::SkylanderSettings::Update();
+        Game::Movement::Update();
         Game::Jump::Update();
         Game::ItemMods::Update();
         Game::FreeCam::Update();

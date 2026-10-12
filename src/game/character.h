@@ -5,10 +5,13 @@
 #include "addresses.h"
 #include "data_types.h"
 #include "physics_object.h"
+#include "state_machine.h"
+#include "meow_hook/util.h"
 
 #pragma pack(push, 1)
 namespace ssa::Game
 {
+    struct StateMachineInstance;
     struct Character;
     struct EntityObject;
 
@@ -27,7 +30,10 @@ namespace ssa::Game
         char            _pad2[0x08];        // +0x024
         PhysicsObject*  physicsBody;        // +0x02C
         char            _pad3[0x4];         // +0x030
-        char            _pad4[0x306];       // +0x034
+        char            _pad4[0x220];       // +0x034
+        Vec3            aimDir;             // +0x254
+        uint8_t         onGround;           // +0x260
+        char            _pad4b[0xD9];       // +0x261
         uint8_t         flying;             // +0x33A jump pads refuse while set
         uint8_t         hovering;           // +0x33B
         uint8_t         alwaysHovering;     // +0x33C
@@ -35,7 +41,9 @@ namespace ssa::Game
         uint8_t         onWater;            // +0x33E
         uint8_t         onLava;             // +0x33F
         uint8_t         fixMove;            // +0x340 set by PostPostUpdate when it snapped the player back to prevPos this frame
-        char            _pad5[0xF8];        // +0x341
+        char            _pad5[0x5B];        // +0x341
+        float           invalidGroundTime;  // +0x39C
+        char            _pad5b[0x99];       // +0x3A0
         uint8_t         airMotion;          // +0x439
         uint8_t         checkMove;          // +0x43A gates ground validity in PostPostUpdate; constructor sets it to 1, some states (jump pads) clear it temporarily
 
@@ -43,12 +51,31 @@ namespace ssa::Game
         // - ray straight down found no valid ground, or CheckCanMove detected water / lava
         // - 0.2s respawn timer for invalid motion
 
-        [[nodiscard]] PhysicsObject* physicsObject() const { return physicsBody; }
+        [[nodiscard]] PhysicsObject* physicsObject() const
+        {
+            return physicsBody;
+        }
+
+        // false when the Skylander cannot stay in water / lava, always true without them
+        [[nodiscard]] bool canMove(const bool isOnWater, const bool isOnLava)
+        {
+            using CanMove_t = bool(__stdcall*)(MotionControl*, bool, bool);
+            return reinterpret_cast<CanMove_t>(GetAddress(CHECK_CAN_MOVE))(this, isOnWater, isOnLava);
+        }
+
+        // moves the player incl. physics, dir = facing
+        void teleport(const Vec3& pos, const Vec3& dir)
+        {
+            meow_hook::func_call<void>(reinterpret_cast<uintptr_t>(GetAddress(MOTION_CONTROL_TELEPORT)), &dir, this, &pos);
+        }
     };
     static_assert(offsetof(MotionControl, m_pObject) == 0x020);
     static_assert(offsetof(MotionControl, physicsBody) == 0x02C);
+    static_assert(offsetof(MotionControl, aimDir) == 0x254);
+    static_assert(offsetof(MotionControl, onGround) == 0x260);
     static_assert(offsetof(MotionControl, flying) == 0x33A);
     static_assert(offsetof(MotionControl, fixMove) == 0x340);
+    static_assert(offsetof(MotionControl, invalidGroundTime) == 0x39C);
     static_assert(offsetof(MotionControl, airMotion) == 0x439);
     static_assert(offsetof(MotionControl, checkMove) == 0x43A);
 
@@ -97,12 +124,13 @@ namespace ssa::Game
         int             contID;             // +0x184 controller index (0=P1, 1=P2)
         char            _pad4[0x004];       // +0x188
         void*           m_pPad;             // +0x18C PadController* - non-null = locally controlled
-        char            _pad5a[0x008];      // +0x190
+        StateMachineInstance* m_pStateMachine; // +0x190
+        char            _pad5a[0x004];      // +0x194
         MotionControl*  m_pMotionControl;   // +0x198
         char            _pad5b[0x008];      // +0x19C
         uint32_t        charFlags;          // +0x1A4 ghost: kCharFlagGhost
-        uint32_t        charExtraBits;      // +0x1A8 invincible/physics/collision bits
-        char            _pad6[0x030];       // +0x1AC (includes second word of charExtraBits bitset)
+        uint32_t        charExtraBits;      // +0x1A8 invincible / physics / collision bits
+        char            _pad6[0x030];       // +0x1AC
         float           hpMultiplier;       // +0x1DC SetHealth(baseHP * hpMultiplier) at spawn
         float           attackMultiplier;   // +0x1E0 works for evil Skylanders, no-op for regular enemies
         float           baseHP;             // +0x1E4
@@ -236,6 +264,24 @@ namespace ssa::Game
         [[nodiscard]] float maxHP() const { return baseHP * hpMultiplier; }
 
         void healToFull() { m_fCurrHealth = maxHP(); }
+
+        // refuses on its own when the character is in state 0xA01D0027 or has charFlags bit 3 set
+        void forceState(const uint32_t stateHash)
+        {
+            const uintptr_t function = reinterpret_cast<uintptr_t>(GetAddress(CHARACTER_FORCE_STATE));
+            __asm {
+                push 1
+                push 0
+                push stateHash
+                mov esi, this
+                call function
+            }
+        }
+
+        [[nodiscard]] bool isInState(const Address stateVtable) const
+        {
+            return m_pStateMachine && m_pStateMachine->isInState(stateVtable);
+        }
     };
     static_assert(offsetof(Character, m_pObject) == 0x00C);
     static_assert(offsetof(Character, m_pObjectCtrl) == 0x010);
@@ -244,6 +290,8 @@ namespace ssa::Game
     static_assert(offsetof(Character, nameID) == 0x15C);
     static_assert(offsetof(Character, contID) == 0x184);
     static_assert(offsetof(Character, m_pPad) == 0x18C);
+    static_assert(offsetof(Character, m_pStateMachine) == 0x190);
+    static_assert(offsetof(Character, m_pMotionControl) == 0x198);
     static_assert(offsetof(Character, charFlags) == 0x1A4);
     static_assert(offsetof(Character, charExtraBits) == 0x1A8);
     static_assert(offsetof(Character, hpMultiplier) == 0x1DC);

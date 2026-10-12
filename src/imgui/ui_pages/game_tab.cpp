@@ -146,6 +146,27 @@ namespace ssa::UIPages
 
             ImGui::Spacing();
 
+            if (ImGui::Checkbox("Unrestricted Movement", &g_config.freeMovement))
+                SetFreeMovement(g_config.freeMovement);
+            ImGui::SameLine();
+            UI::HelpMarker("Lets you walk off ledges and level edges and jump over gaps. "
+                "Falling out of the level, or into water / lava as a Skylander that can't swim, respawns you at a nearby safe spot.");
+
+            if (ImGui::Checkbox("Unlimited co-op distance", &g_config.unlimitedCoopDistance))
+                SetUnlimitedCoopDistance(g_config.unlimitedCoopDistance);
+            ImGui::SameLine();
+            UI::HelpMarker("Co-op players can move as far apart as they like. Without this the game holds you back when you move far from your partner.");
+
+            ImGui::BeginDisabled(!g_config.freeMovement && !g_config.unlimitedCoopDistance);
+            if (ImGui::Checkbox("Rejoin co-op players", &g_config.coopRejoin))
+                SetCoopRejoin(g_config.coopRejoin);
+            ImGui::SameLine();
+            UI::HelpMarker("Brings player 2 back to player 1 when you are far apart.",
+                "Needs Unrestricted Movement or Unlimited co-op distance, otherwise the game already does this itself.");
+            ImGui::EndDisabled();
+
+            ImGui::Spacing();
+
             auto* list = Game::Character::instanceSkylandersList();
 
             if (!list || list->empty())
@@ -307,11 +328,6 @@ namespace ssa::UIPages
             ImGui::SameLine();
             UI::HelpMarker("Removes invisible walls that only block Skylanders. Floors, regular walls and other invisible walls are unaffected.",
                 "This can let you reach areas the level wasn't designed for. If you get stuck or fall out of the level, turn this off.");
-
-            // TODO: fix respawn weirdness, water detection for non-water / -flying Skylanders, allow jumping over gaps
-            // ImGui::Checkbox("Remove edge limits", &g_config.removeEdgeGuards);
-            // ImGui::SameLine();
-            // UI::HelpMarker("Lets you walk off ledges, level edges and platforms the game normally stops you at.");
         }
 
         ImGui::Spacing();

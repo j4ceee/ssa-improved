@@ -42,6 +42,9 @@ namespace ssa
         bool removePlayerBlockers = true; // strip the player-only invisible wall collision layer from local players
         bool jumpEnabled = true;
         int jumpHeight = 3;
+        bool freeMovement = true;
+        bool unlimitedCoopDistance = true;
+        bool coopRejoin = true;
 
         // Music
         uint32_t menuMusicEvent = Game::Data::Music::Hub_5.eventId; // Wwise event played on the main menu (default Hub 5, Main Menu = original track)
@@ -68,9 +71,6 @@ namespace ssa
         // session based (not saved to file) ----------------------------------------------
 
         int freeCamFov = static_cast<int>(Game::kDefaultFOV);
-
-        // stop the game from snapping players back at ledges / invalid ground (see SkylanderSettings::UpdateEdgeGuards)
-        bool removeEdgeGuards = false;
 
         bool textureCycler = false;
 
@@ -146,6 +146,9 @@ namespace ssa
         LogF("[Config] Remove player blockers: %d", g_config.removePlayerBlockers);
         LogF("[Config] Jump enabled: %d", g_config.jumpEnabled);
         LogF("[Config] Jump height: %d", g_config.jumpHeight);
+        LogF("[Config] Free movement enabled: %d", g_config.freeMovement);
+        LogF("[Config] Unlimited coop distance: %d", g_config.unlimitedCoopDistance);
+        LogF("[Config] Coop rejoin: %d", g_config.coopRejoin);
         LogF("[Config] Font scale: %.1f", g_config.uiFontScale);
         LogF("[Config] Texture mods: %d", g_config.textureMods);
         LogF("[Config] Texture dump: %d", g_config.textureDump);
@@ -217,12 +220,18 @@ namespace ssa
             L"; Use a fully emulated portal instead of a physical USB device (0 = disabled (default), 1 = enabled)\n"
             L"; When enabled, all other portal backends are ignored. Manage figures via the Portal tab in the mod menu.\n"
             L"EmulatedPortal=%d\n"
-            L"; Remove invisible walls that only block Skylanders (0 = disabled, 1 = enabled (default))\n"
-            L"RemovePlayerBlockers=%d\n"
             L"; Enable jumping (0 = disabled, 1 = enabled (default))\n"
             L"Jumping=%d\n"
             L"; Jump height (2 = default)\n"
             L"JumpHeight=%d\n"
+            L"; Lets you walk off ledges and level edges and jump over gaps (0 = disabled, 1 = enabled (default))\n"
+            L"FreeMovement=%d\n"
+            L"; Lets co-op players move as far apart as they like (0 = disabled, 1 = enabled (default))\n"
+            L"UnlimitedCoopDistance=%d\n"
+            L"; Brings player 2 back to player 1 when they are far apart (0 = disabled, 1 = enabled (default))\n"
+            L"CoopRejoin=%d\n"
+            L"; Remove invisible walls that only block Skylanders (0 = disabled, 1 = enabled (default))\n"
+            L"RemovePlayerBlockers=%d\n"
             L"\n"
             L"[Difficulty]\n"
             L"; Base HP multiplier for enemies (0.1 = 10%% HP, 1.0 = default HP (default), 10.0 = 1000%% HP)\n"
@@ -282,9 +291,12 @@ namespace ssa
 
             // Game
             static_cast<int>(g_config.emulatedPortal),
-            static_cast<int>(g_config.removePlayerBlockers),
             static_cast<int>(g_config.jumpEnabled),
             g_config.jumpHeight,
+            static_cast<int>(g_config.freeMovement),
+            static_cast<int>(g_config.unlimitedCoopDistance),
+            static_cast<int>(g_config.coopRejoin),
+            static_cast<int>(g_config.removePlayerBlockers),
 
             // Difficulty
             g_config.hpMult,
@@ -395,9 +407,12 @@ namespace ssa
         // Game
         g_config.emulatedPortal = getInt(L"Game", L"EmulatedPortal", 0) != 0;
         g_config.emulatedPortalStartup = g_config.emulatedPortal; // cache initial value
-        g_config.removePlayerBlockers = getInt(L"Game", L"RemovePlayerBlockers", 1) != 0;
         g_config.jumpEnabled = getInt(L"Game", L"Jumping", 1) != 0;
         g_config.jumpHeight = getInt(L"Game", L"JumpHeight", 3);
+        g_config.freeMovement = getInt(L"Game", L"FreeMovement", 1) != 0;
+        g_config.unlimitedCoopDistance = getInt(L"Game", L"UnlimitedCoopDistance", 1) != 0;
+        g_config.coopRejoin = getInt(L"Game", L"CoopRejoin", 1) != 0;
+        g_config.removePlayerBlockers = getInt(L"Game", L"RemovePlayerBlockers", 1) != 0;
         // Difficulty
         g_config.hpMult = getFloat(L"Difficulty", L"HpMult", 1.0f);
         g_config.dmgMult = getFloat(L"Difficulty", L"DmgMult", 1.0f);
@@ -594,6 +609,24 @@ namespace ssa
     inline void SetJumpHeight(int value)
     {
         g_config.jumpHeight = std::max(0, std::min(40, value));
+        SaveConfig();
+    }
+
+    inline void SetFreeMovement(bool value)
+    {
+        g_config.freeMovement = value;
+        SaveConfig();
+    }
+
+    inline void SetUnlimitedCoopDistance(bool value)
+    {
+        g_config.unlimitedCoopDistance = value;
+        SaveConfig();
+    }
+
+    inline void SetCoopRejoin(bool value)
+    {
+        g_config.coopRejoin = value;
         SaveConfig();
     }
 

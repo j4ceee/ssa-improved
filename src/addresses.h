@@ -23,6 +23,13 @@ namespace ssa
 
         RUINS_STATE, // int32, hub stage (1-6) cached by lux::GetSpyroRuinsState
 
+        // movement stuff
+        CHECK_CAN_MOVE,
+        MOTION_CONTROL_TELEPORT,
+        CHARACTER_FORCE_STATE,
+        PLAYER_LEASH_MAX,
+        RESPAWN_POINT_LIST,
+
         // dynamic lights
         LIGHT_FACTORY,
         LIGHT_DELETE, // lux::Light::Delete (thiscall, vtable slot 1)
@@ -57,6 +64,8 @@ namespace ssa
         LIGHT_VTABLE,
         PROJECTILE_VTABLE,
         PAD_STATE_ARRAY,
+        STATE_DROWN_VTABLE,
+        STATE_WAIT_JOIN_VTABLE,
 
         // sound system stuff
         AK_REGISTER_GAME_OBJ, // AK::SoundEngine::RegisterGameObj(uint)

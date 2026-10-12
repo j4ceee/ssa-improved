@@ -25,6 +25,12 @@ namespace ssa
 
         g_Address[RUINS_STATE] = 0x00d8594c; // hub stage (1-6) cached by lux::GetSpyroRuinsState
 
+        g_Address[CHECK_CAN_MOVE] = 0x007b5450;
+        g_Address[MOTION_CONTROL_TELEPORT] = 0x007b6530;
+        g_Address[CHARACTER_FORCE_STATE] = 0x0050ffd0;
+        g_Address[PLAYER_LEASH_MAX] = 0x00E1FD08;
+        g_Address[RESPAWN_POINT_LIST] = 0x00CB043C;
+
         g_Address[LIGHT_FACTORY] = 0x00981c60; // lux::Light::LightFromLX
         g_Address[LIGHT_DELETE] = 0x0097d0d0; // lux::Light::Delete
         g_Address[SHARED_CTRL_ON_STRONG_ZERO] = 0x0099d8e0;
@@ -54,6 +60,8 @@ namespace ssa
         g_Address[LIGHT_VTABLE] = 0x00babc4c;
         g_Address[PROJECTILE_VTABLE] = 0x00bbc034;
         g_Address[PAD_STATE_ARRAY] = 0x00D99C30;
+        g_Address[STATE_DROWN_VTABLE] = 0x00BB71D4;
+        g_Address[STATE_WAIT_JOIN_VTABLE] = 0x00BB7744;
 
         // sound system stuff
         g_Address[AK_REGISTER_GAME_OBJ] = 0x006272f0;
