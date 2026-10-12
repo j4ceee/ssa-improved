@@ -33,6 +33,8 @@ namespace ssa
         g_Address[CONSTANT_LOOKUP_THUNK] = 0x004297b0; // ltl2::binary_search<Shader::ConstantQuery*, crc32>, JMP [slot]
         g_Address[CONSTANT_LOOKUP_SLOT] = 0x01db9218; // SecuROM's pointer to the body of the function above
 
+        g_Address[READBACK_LOCK_RETURN] = 0x00966206;
+
         g_Address[JOY_POLL_RETURN] = 0x009476CD;
         g_Address[MOUSE_DEVICE] = 0x00ca29e0; // DirectInput mouse device pointer
         // VTables

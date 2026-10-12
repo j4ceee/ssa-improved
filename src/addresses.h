@@ -33,6 +33,9 @@ namespace ssa
         CONSTANT_LOOKUP_THUNK, // stub in .text: JMP [CONSTANT_LOOKUP_SLOT]
         CONSTANT_LOOKUP_SLOT, // pointer to the function body, plain data in the .securom section
 
+        // the game reads a 4x4 system memory texture (a tiny copy of the scene) back to the CPU every frame to build a histogram of it, see window/async_readback.h
+        READBACK_LOCK_RETURN, // return address of its IDirect3DTexture9::LockRect call
+
         JOY_POLL_RETURN,
         MOUSE_DEVICE,
         // VTables

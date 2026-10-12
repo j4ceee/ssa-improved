@@ -11,6 +11,7 @@
 #include "window_hooks.h"
 #include "texture_mods.h"
 #include "state_cache.h"
+#include "async_readback.h"
 #include "patches.h"
 #include "render_targets.h"
 #include "shader/shader_tracker.h"
@@ -18,7 +19,7 @@
 #include "shader/shader_patches.h"
 #include "shader/ui_hider.h"
 #include "game/custom/cinema_skip.h"
-#include "game/custom/constant_lookup.h"
+#include "../securom/constant_lookup.h"
 #include "game/custom/difficulty.h"
 #include "game/custom/free_cam.h"
 #include "game/custom/items.h"
@@ -341,6 +342,7 @@ namespace ssa::D3D9Hooks
 
         if (SUCCEEDED(hr) && ppTexture && *ppTexture)
         {
+            AsyncReadback::Install(*ppTexture);
             TextureMods::g_ptrToHash.erase(*ppTexture); // evict any stale entry at this address
             RenderTargets::OnTextureCreated(*ppTexture, reqW, reqH, Usage);
         }
@@ -468,7 +470,11 @@ namespace ssa::D3D9Hooks
         const HRESULT hr = draw();
         ShaderTweaks::PostDraw(d, restore);
         if (restore.n)
-            StateCache::InvalidatePsConstF(); // the mod changed pixel shader constants behind the state cache
+        {
+            // mod changed pixel shader constants behind the state cache: only those registers are unknown now
+            for (uint8_t i = 0; i < restore.n; ++i)
+                StateCache::InvalidatePsConstF(restore.ranges[i].start, restore.ranges[i].count);
+        }
         return hr;
     }
 
@@ -705,13 +711,17 @@ namespace ssa::D3D9Hooks
             // 3. draw UI
             UI::Get()->Render();
 
-            // 4. finalize and render ImGui to the screen
+            // 4. finalize and render ImGui to the screen (only if there's something to draw)
             ImGui::Render();
             ImGui::EndFrame();
-            UiHider::g_inOverlay = true; // the mod's own overlay must never be hidden
-            ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
-            UiHider::g_inOverlay = false;
-            StateCache::Invalidate(); // the ImGui backend changes device state and restores it behind the hooks
+            ImDrawData* drawData = ImGui::GetDrawData();
+            if (drawData && drawData->TotalVtxCount > 0)
+            {
+                UiHider::g_inOverlay = true; // the mod's own overlay must never be hidden
+                ImGui_ImplDX9_RenderDrawData(drawData);
+                UiHider::g_inOverlay = false;
+                StateCache::Invalidate(); // the ImGui backend changes device state and restores it behind the hooks
+            }
         }
 
         // 5. call original EndScene
@@ -732,6 +742,7 @@ namespace ssa::D3D9Hooks
 
         ShaderTracker::OnReset();
         UiHider::OnReset();
+        AsyncReadback::OnReset();
         RenderTargets::OnReset();
         TextureMods::OnReset();
 
@@ -792,6 +803,7 @@ namespace ssa::D3D9Hooks
                     {17,    (void*)&hook_Present,                   (void**)&orig_Present,                  "Present"                   },
                     {23,    (void*)&hook_CreateTexture,             (void**)&orig_CreateTexture,            "CreateTexture"             },
                     {29,    (void*)&hook_CreateDepthStencilSurface, (void**)&orig_CreateDepthStencilSurface,"CreateDepthStencilSurface" },
+                    {32,    (void*)&AsyncReadback::hook_GetRenderTargetData, (void**)&AsyncReadback::orig_GetRenderTargetData, "GetRenderTargetData"},
                     {37,    (void*)&hook_SetRenderTarget,           (void**)&orig_SetRenderTarget,          "SetRenderTarget"           },
                     {42,    (void*)&hook_EndScene,                  (void**)&orig_EndScene,                 "EndScene"                  },
                     {47,    (void*)&hook_SetViewport,               (void**)&orig_SetViewport,              "SetViewport"               },

@@ -1,7 +1,7 @@
 #include <imgui.h>
 #include "addresses.h"
 #include "game/custom/difficulty.h"
-#include "game/custom/constant_lookup.h"
+#include "securom/constant_lookup.h"
 #include "game/game.h"
 #include "game/magic_item_manager.h"
 #include "game/mp_game.h"
@@ -12,6 +12,7 @@
 #include "imgui/ui_pages/diagnostics/debug_table.h"
 #include "imgui/fonts/IconsMaterialDesign.h"
 #include "window/state_cache.h"
+#include "window/async_readback.h"
 #include "window/texture_mods.h"
 
 namespace ssa::UIPages
@@ -173,10 +174,29 @@ namespace ssa::UIPages
         ImGui::TreePop();
     }
 
+    void RenderAsyncReadbackDiagnostics()
+    {
+        if (!ImGui::TreeNode("Asynchronous 4x4 Readback"))
+            return;
+        ImGui::Indent();
+
+        ImGui::Checkbox("Never wait for the 4x4 readback", &AsyncReadback::g_enabled);
+        ImGui::SameLine();
+        UI::HelpMarker("Every frame the game reads a 4x4 copy of the scene back to the CPU and waits for it, which stalls the CPU. "
+            "When on, the game gets the previous copy instead (one frame old), picked up before the next one is queued.\n"
+            "Turn it off to compare FPS.");
+        ImGui::TextDisabled("Game locks: %u answered from the early pickup, %u let through", AsyncReadback::g_deferred, AsyncReadback::g_blocked);
+        ImGui::TextDisabled("Copies: %u picked up early, %u not ready", AsyncReadback::g_polled, AsyncReadback::g_missed);
+
+        ImGui::Unindent();
+        ImGui::TreePop();
+    }
+
     void RenderDiagnosticWindow()
     {
         RenderConstantLookupDiagnostics();
         RenderStateCacheDiagnostics();
+        RenderAsyncReadbackDiagnostics();
 
         if (ImGui::TreeNode("Game"))
         {

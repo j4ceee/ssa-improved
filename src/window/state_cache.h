@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
+#include <emmintrin.h>
 
 // Drops D3D9 state calls that would not change anything
 // - game sets all of its state per draw call and relies on the driver to ignore repeats: about 80% of the SetRenderState / SetSamplerState / Set*ShaderConstant
@@ -101,6 +102,14 @@ namespace ssa::StateCache
             return false;
         }
 
+        // bit-exact compare of two float4 (like memcmp) without a call per register: SameFloats runs for every constant the game sets
+        inline bool SameVec4(const float* a, const float* b)
+        {
+            const __m128i x = _mm_loadu_si128(reinterpret_cast<const __m128i*>(a));
+            const __m128i y = _mm_loadu_si128(reinterpret_cast<const __m128i*>(b));
+            return _mm_movemask_epi8(_mm_cmpeq_epi8(x, y)) == 0xFFFF;
+        }
+
         inline bool SameFloats(Kind kind, Vec4* bank, UINT bankSize, UINT start, const float* data, UINT count)
         {
             if (!data || start >= bankSize || count > bankSize - start)
@@ -114,7 +123,7 @@ namespace ssa::StateCache
             for (UINT i = 0; i < count && same; ++i)
             {
                 const Vec4& r = bank[start + i];
-                same = r.stamp == gen && std::memcmp(r.v, data + i * 4, sizeof(r.v)) == 0;
+                same = r.stamp == gen && SameVec4(r.v, data + i * 4);
             }
             if (same)
             {
@@ -217,11 +226,18 @@ namespace ssa::StateCache
         return detail::SameBools(PsConstB, detail::g_psB, start, data, count);
     }
 
-    // mod wrote pixel shader constants behind the cache (ShaderTweaks / ShaderPatches around a draw call): forget those
+    // mod wrote pixel shader constants behind the cache (ShaderTweaks / ShaderPatches around a draw call): forget those.
+    // only the registers that were written: the rest of the mirror is still exact, and wiping it makes every constant of the next draw call go through to D3D again.
+    inline void InvalidatePsConstF(UINT start, UINT count)
+    {
+        for (UINT i = start; i < start + count && i < detail::kPsFloatRegs; ++i)
+            detail::g_psF[i].stamp = 0; // 0 never equals a generation
+    }
+
+    // every pixel shader constant (kept for callers that cannot tell which registers they touched)
     inline void InvalidatePsConstF()
     {
-        for (detail::Vec4& r : detail::g_psF)
-            r.stamp = 0; // 0 never equals a generation
+        InvalidatePsConstF(0, detail::kPsFloatRegs);
     }
 
     // called once per frame from Present

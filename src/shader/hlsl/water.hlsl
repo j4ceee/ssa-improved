@@ -480,10 +480,17 @@ float4 main(PsIn i, float2 vpos : VPOS) : COLOR0
     refraction = height <= 0 ? refraction : refractionPlain;
 #endif
 #if SSA_CAUSTICS
-    refraction += refraction * CausticLight(i.worldPos, toFloor, height, ssa_Time.x);
+    // caustics are zero above the water line and below SSA_CAUSTIC_DEPTH -> skip whole pattern
+    [branch]
+    if (height <= 0 && height > -SSA_CAUSTIC_DEPTH)
+        refraction += refraction * CausticLight(i.worldPos, toFloor, height, ssa_Time.x);
 #endif
 #if SSA_FOAM
-    float foam = FoamCoverage(i.worldPos, toFloor, height, camPos, ssa_Time.x);
+    // foam is zero when the surface is SSA_FOAM_WIDTH or more away from water line, above or below
+    float foam = 0;
+    [branch]
+    if (abs(height) < SSA_FOAM_WIDTH)
+        foam = FoamCoverage(i.worldPos, toFloor, height, camPos, ssa_Time.x);
 #endif
 
     // original: the deeper the water, the more the refraction turns into the ocean colour
