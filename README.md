@@ -33,11 +33,14 @@
 - Multiplier for experience gained from defeating enemies
 - Per-player controls featuring god mode, health modifications, faction swapping and more
 - Jumping by pressing the left stick (`L3`) on a controller, with adjustable jump height
+- Unrestricted movement across ledges and gaps, with safe respawning after falls
+- Optional unlimited co-op distance and automatic player rejoining
 - Option to remove invisible walls that only block Skylanders
 - Most cutscenes can be skipped immediately, including on a first playthrough
 - Setting to load into any level at any time
 - Reusable Magic Items & infinite duration for Magic Items
 - Free cam
+- Customizable main-menu music and corrected late-game hub music
 
 ### Graphics
 - Windowed & borderless windowed mode on Windows
@@ -45,8 +48,14 @@
 - VSync toggle
 - FPS cap
 - Supersampling (up to 4x) (renders the game at a higher resolution and then downscales it to the display resolution)
+- Higher-resolution shadow maps (up to 4096x4096)
 - Anisotropic filtering (up to 16x)
 - Texture sharpness control
+- Adjustable depth of field and distance fog
+- Improved water with screen-space reflections, caustics and foam
+- Additional dynamic attack lights with screen-space shadows
+- Contact-hardening soft sun shadows
+- Option to hide the in-game HUD for screenshots
 
 ### Texture mods
 - Custom textures can be loaded from the `ssa-improved/textures` folder
