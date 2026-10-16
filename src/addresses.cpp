@@ -13,6 +13,7 @@ namespace ssa
         g_Address[MAGIC_ITEM_MANAGER] = 0x00E33004;
         g_Address[SOUND_MANAGER] = 0x00E35604;
         g_Address[SOUND_SYSTEM] = 0x00e32b48;
+        g_Address[UI_GAME] = 0x00E33038;
 
         g_Address[CINEMA_TRIGGER_LIST] = 0x00CBC82C;
         g_Address[DEBUG_CAM_UPDATE] = 0x008b0f70;
@@ -62,6 +63,11 @@ namespace ssa
         g_Address[PAD_STATE_ARRAY] = 0x00D99C30;
         g_Address[STATE_DROWN_VTABLE] = 0x00BB71D4;
         g_Address[STATE_WAIT_JOIN_VTABLE] = 0x00BB7744;
+        g_Address[UI_TEXT_DIALOG_VTABLE] = 0x00BBB944;
+        g_Address[CAMERA_ATTACH_TRIGGER_VTABLE] = 0x00BAF0B0;
+        g_Address[SPYRO_CLOSEUP_TRIGGER_VTABLE] = 0x00BAF0DC;
+        g_Address[SKIP_TRIGGER_VTABLE] = 0x00BB1040;
+        g_Address[SCRIPT_CINEMA_VTABLE] = 0x00BB18AC;
 
         // sound system stuff
         g_Address[AK_REGISTER_GAME_OBJ] = 0x006272f0;

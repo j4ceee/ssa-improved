@@ -11,6 +11,7 @@ namespace ssa
         MAGIC_ITEM_MANAGER,
         SOUND_MANAGER,
         SOUND_SYSTEM,
+        UI_GAME,
 
         CINEMA_TRIGGER_LIST,
         DEBUG_CAM_UPDATE,
@@ -66,6 +67,11 @@ namespace ssa
         PAD_STATE_ARRAY,
         STATE_DROWN_VTABLE,
         STATE_WAIT_JOIN_VTABLE,
+        UI_TEXT_DIALOG_VTABLE,
+        CAMERA_ATTACH_TRIGGER_VTABLE,
+        SPYRO_CLOSEUP_TRIGGER_VTABLE,
+        SKIP_TRIGGER_VTABLE,
+        SCRIPT_CINEMA_VTABLE,
 
         // sound system stuff
         AK_REGISTER_GAME_OBJ, // AK::SoundEngine::RegisterGameObj(uint)
