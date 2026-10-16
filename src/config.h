@@ -31,6 +31,7 @@ namespace ssa
         bool attackLights = true; // dynamic lights on projectile attacks that have none (see Game::AttackLights), false = vanilla lighting
         bool lightShadows = true; // screen-space shadows for dynamic lights (see OmniLightPatch), false = lights cast no shadows like in vanilla
         bool softSunShadows = true; // contact-hardening soft sun shadows (see SunLightPatch), false = the game's fixed-width shadow filter
+        bool magicMomentLighting = true; // lights the Skylander on the magic moment screen from below, false = the game's flat lighting
         int anisotropy = 8; // 1, 2, 4, 8, 16
 
         int textureSharpness = 10; // 0 = off, 10 = default, 20 = max (maps to lodBias internally)
@@ -135,6 +136,7 @@ namespace ssa
         LogF("[Config] Attack lights: %d", g_config.attackLights);
         LogF("[Config] Light shadows: %d", g_config.lightShadows);
         LogF("[Config] Soft sun shadows: %d", g_config.softSunShadows);
+        LogF("[Config] Magic moment lighting: %d", g_config.magicMomentLighting);
         LogF("[Config] Texture sharpness: %d (LOD bias: %.1f)", g_config.textureSharpness, g_config.lodBias);
         LogF("[Config] HP multiplier: %.2f", g_config.hpMult);
         LogF("[Config] Damage multiplier: %.2f", g_config.dmgMult);
@@ -211,6 +213,8 @@ namespace ssa
             L"LightShadows=%d\n"
             L"; Soft sun shadows that are sharp where an object touches the ground and get softer with distance (0 = the game's fixed-width shadows (default), 1 = enabled)\n"
             L"SoftSunShadows=%d\n"
+            L"; Lights the Skylander on the magic moment screen from below, like the Wii U version (0 = flat vanilla lighting, 1 = enabled (default))\n"
+            L"MagicMomentLighting=%d\n"
             L"; Anisotropic filtering level (1 = off, valid: 1/2/4/8/16)\n"
             L"Anisotropy=%d\n"
             L"; Texture sharpness (0 = off, 10 = default, 20 = maximum)\n"
@@ -286,6 +290,7 @@ namespace ssa
             static_cast<int>(g_config.attackLights),
             static_cast<int>(g_config.lightShadows),
             static_cast<int>(g_config.softSunShadows),
+            static_cast<int>(g_config.magicMomentLighting),
             g_config.anisotropy,
             g_config.textureSharpness,
 
@@ -388,6 +393,7 @@ namespace ssa
         g_config.waterReflections = getInt(L"Graphics", L"WaterReflections", 1) != 0;
         g_config.attackLights = getInt(L"Graphics", L"AttackLights", 1) != 0;
         g_config.softSunShadows = getInt(L"Graphics", L"SoftSunShadows", 1) != 0;
+        g_config.magicMomentLighting = getInt(L"Graphics", L"MagicMomentLighting", 1) != 0;
         g_config.lightShadows = getInt(L"Graphics", L"LightShadows", 1) != 0;
 
         int anisotropy = getInt(L"Graphics", L"Anisotropy", 8);
@@ -535,6 +541,12 @@ namespace ssa
     inline void EnableSoftSunShadows(bool value)
     {
         g_config.softSunShadows = value;
+        SaveConfig();
+    }
+
+    inline void EnableMagicMomentLighting(bool value)
+    {
+        g_config.magicMomentLighting = value;
         SaveConfig();
     }
 

@@ -48,20 +48,29 @@ float4 ssa_Light : register(c112);
 static const float kStep = SSA_RAY_END / SSA_STEPS;
 
 // 1 if the point is hidden behind what the camera sees at its screen position (and not by more than the thickness)
-float PointBlocked(float3 worldPos, float3 camPos)
+float PointBlocked(float4 projected, float3 cameraRelativePos, float3 cameraDepthAxis)
 {
-    float4 projected = mul(float4(worldPos, 1), ssa_mWorldToScreen);
-    float2 ndc = projected.xy / projected.w;
-    float2 uv = ndc * float2(0.5, -0.5) + 0.5;
-
+    // Mask invalid samples below instead of branching twice per step. Keep the
+    // fetch coordinates finite even when the ray crosses the camera plane.
+    float2 ndc = projected.xy / max(projected.w, 1e-20);
+    float2 uv = saturate(ndc * float2(0.5, -0.5) + 0.5);
     float depth = tex2Dlod(DepthMap, float4(uv, 0, 0)).x;
-    float sceneDist = length(WorldPositionFromDepth(ndc, depth, mScreenToWorld) - camPos);
-    float pointDist = length(worldPos - camPos);
-    float behind = pointDist - sceneDist;
-
-    // usable: on screen, in front of the camera, not sky (depth 0)
-    bool usable = all(uv >= 0) && all(uv <= 1) && projected.w >= 0 && depth > 0.00001;
-    bool blocked = behind >= SSA_DEPTH_BIAS + pointDist * SSA_DEPTH_BIAS_REL && behind <= SSA_THICKNESS;
+    // Inverse projection gives sceneRelative = sceneNumerator / sceneW.
+    // Compare squared distance bounds in homogeneous space: this removes the
+    // scene-distance square root and division, without changing radial bias or
+    // thickness. Works for perspective and orthographic matrices alike.
+    float delta = depth * projected.w - projected.z;
+    float sceneW = 1 + delta * mScreenToWorld[2].w;
+    float3 sceneNumerator = cameraRelativePos + delta * cameraDepthAxis;
+    float sceneDist2 = dot(sceneNumerator, sceneNumerator);
+    float pointDist = length(cameraRelativePos);
+    float bias = SSA_DEPTH_BIAS + pointDist * SSA_DEPTH_BIAS_REL;
+    // Clamping the near bound handles points closer than SSA_THICKNESS.
+    // pointDist >= bias below rejects a negative far bound before squaring.
+    float2 bounds = max(pointDist - float2(SSA_THICKNESS, bias), 0) * abs(sceneW);
+    bounds *= bounds;
+    bool usable = projected.w > 0 && all(abs(projected.xy) <= projected.w) && depth > 0.00001 && sceneW != 0;
+    bool blocked = sceneDist2 >= bounds.x && sceneDist2 <= bounds.y && pointDist >= bias;
     return (usable && blocked) ? 1.0 : 0.0;
 }
 
@@ -75,11 +84,17 @@ float LightShadow(float2 vpos, float3 pixelPos, float3 normal, float3 lightPos, 
     // per-pixel jitter of the steps so they do not form visible bands
     float t = kStep * (InterleavedGradientNoise(vpos) * 0.8 + 0.2);
 
+    // Project the ray once; interpolate homogeneous coordinates, not divided UVs.
+    float4 clipStart = mul(float4(start, 1), ssa_mWorldToScreen);
+    float4 clipRay = mul(float4(toLight, 0), ssa_mWorldToScreen);
+    float3 relativeStart = start - camPos;
+    float3 cameraDepthAxis = mScreenToWorld[2].xyz - camPos * mScreenToWorld[2].w;
+
     float hits = 0;
     [loop]
     for (int i = 0; i < SSA_STEPS; ++i)
     {
-        hits += PointBlocked(start + toLight * t, camPos);
+        hits += PointBlocked(clipStart + clipRay * t, relativeStart + toLight * t, cameraDepthAxis);
         t += kStep;
         if (hits >= SSA_HITS_FOR_FULL) break; // fully shadowed already
     }
@@ -113,19 +128,21 @@ PsOut main(float2 vpos : VPOS)
     float3 N = gbuffer.xyz * 2 - 1;
     float specPower = gbuffer.w * 255 + 1;
 
-    // the mod: screen-space shadow, only for pixels inside the light's radius
-    float shadow = 1;
-    [branch]
-    if (ssa_Light.z > 0 && falloff > 0)
-        shadow = LightShadow(vpos, pos, N, OmniLightPosition.xyz, camPos);
-
-    // original: Blinn-Phong. rgb = diffuse (scaled by 0.5, the lighting buffer holds 0..2), a = luminance of the specular
-    float3 lightColor = atten * shadow * OmniLightColor.xyz;
+    // Evaluate both diffuse and specular before deciding whether a shadow can matter.
     float3 L = toLight * rsqrt(dist2);
     float ndl = saturate(dot(N, L));
     float3 V = toCam * rsqrt(dot(toCam, toCam));
     float3 H = normalize(V + L);
     float spec = pow(saturate(dot(N, H)), specPower) * (specPower * 0.0333333351 + 1);
+
+    // Skip the ray only when its light contribution is exactly zero (no brightness cutoff).
+    float shadow = 1;
+    [branch]
+    if (ssa_Light.z > 0 && falloff > 0 && atten != 0 && max(ndl, spec) > 0)
+        shadow = LightShadow(vpos, pos, N, OmniLightPosition.xyz, camPos);
+
+    // original: Blinn-Phong. rgb = diffuse (scaled by 0.5, the lighting buffer holds 0..2), a = luminance of the specular
+    float3 lightColor = atten * shadow * OmniLightColor.xyz;
 
     PsOut o;
     o.color.rgb = lightColor * ndl * 0.5;

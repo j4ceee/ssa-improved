@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iterator>
+#include "magic_moment_patch.h"
 #include "omni_light_patch.h"
 #include "shader_patcher.h"
 #include "sun_light_patch.h"
@@ -13,6 +14,11 @@ namespace ssa::ShaderPatches
         &WaterPatch::g_patch,
         &OmniLightPatch::g_patch,
         &SunLightPatch::g_patch,
+        &MagicMomentPatch::g_constAdd,
+        &MagicMomentPatch::g_constMul,
+        &MagicMomentPatch::g_texAdd,
+        &MagicMomentPatch::g_texMul,
+        &MagicMomentPatch::g_texPlain,
     };
 
     // called from ShaderTracker::OnPixelShaderCreated for every shader the game creates

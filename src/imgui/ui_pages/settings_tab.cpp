@@ -131,6 +131,12 @@ namespace ssa::UIPages
             ImGui::SameLine();
             UI::HelpMarker("Sun shadows are sharp where an object touches the ground and get softer the further the shadow falls from it.");
 
+            bool magicMomentLighting = g_config.magicMomentLighting;
+            if (ImGui::Checkbox("Magic Moment Lighting", &magicMomentLighting))
+                EnableMagicMomentLighting(magicMomentLighting);
+            ImGui::SameLine();
+            UI::HelpMarker("Lights the Skylander on the portal screen from below, like the Wii U version, instead of the flat vanilla lighting.");
+
             bool waterReflections = g_config.waterReflections;
             if (ImGui::Checkbox("Better Water", &waterReflections))
                 EnableWaterReflections(waterReflections);
