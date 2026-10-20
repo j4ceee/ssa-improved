@@ -16,7 +16,7 @@
 namespace ssa
 {
 
-void UI::Initialize()
+void UI::Initialize(HWND hWnd)
 {
     if (m_initialized) {
         return;
@@ -35,7 +35,7 @@ void UI::Initialize()
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.MouseDrawCursor = false;
 
-    SetupUiLook();
+    SetupUiLook(hWnd);
 
     // register custom settings handler
     // ImGuiSettingsHandler ini_handler;
@@ -64,16 +64,16 @@ void UI::Shutdown()
     m_initialized = false;
 }
 
-void UI::SetupUiLook()
+void UI::SetupUiLook(HWND hWnd)
 {
     ImGui::StyleColorsDark();
 
     ImGuiStyle& style = ImGui::GetStyle();
     ImGuiIO& io = ImGui::GetIO();
 
-    // query DPI from the game window (or fallback to desktop DPI)
-    float dpiScale = 1.0f;
-    dpiScale = GetDeviceCaps(GetDC(nullptr), LOGPIXELSX) / 96.0f;
+    // DPI of the monitor the game window is on (the screen DC would give the system DPI, i.e. the primary monitor's)
+    const float dpiScale = WindowHooks::GetWindowDpi(hWnd) / 96.0f;
+    Log("[UI] DPI scale: %.2f", dpiScale);
     float fontSize = std::round(16.0f * dpiScale); // e.g. 32px on 4K
 
     // fonts

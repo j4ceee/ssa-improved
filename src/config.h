@@ -14,8 +14,8 @@ namespace ssa
     struct Config
     {
         // Window
-        bool windowed = true; // run in windowed mode
-        bool borderless = true; // borderless if in windowed mode
+        int monitor = 0; // monitor the game opens on: 0 = primary monitor, N = "Display N" (\\.\DISPLAYN)
+        bool borderless = true; // borderless window (no border / titlebar)
         int resolutionW = 0; // 0 = use desktop resolution
         int resolutionH = 0; // 0 = use desktop resolution
 
@@ -121,7 +121,7 @@ namespace ssa
 
         LogF("[Log] Log level: %s (%d)", level, g_config.logLevel);
         // log all settings:
-        LogF("[Config] Windowed: %d", g_config.windowed);
+        LogF("[Config] Monitor: %d", g_config.monitor);
         LogF("[Config] Borderless: %d", g_config.borderless);
         LogF("[Config] ResolutionW: %d", g_config.resolutionW);
         LogF("[Config] ResolutionH: %d", g_config.resolutionH);
@@ -180,9 +180,9 @@ namespace ssa
             L"; Skylanders Spyro's Adventure Improved - Mod Config\n"
             L"\n"
             L"[Window]\n"
-            L"; Run game in windowed mode (0 = fullscreen, 1 = windowed (default))\n"
-            L"Windowed=%d\n"
-            L"; Remove window border / titlebar (requires Windowed=1) (0 = disabled, 1 = enabled (default))\n"
+            L"; Monitor the game opens on (0 = primary monitor (default), 1/2/3... = display number from your Windows display settings)\n"
+            L"Monitor=%d\n"
+            L"; Remove window border / titlebar (0 = disabled, 1 = enabled (default))\n"
             L"Borderless=%d\n"
             L"; Custom resolution (set both to 0 to use your desktop resolution)\n"
             L"ResolutionW=%d\n"
@@ -273,7 +273,7 @@ namespace ssa
             L"LogLevel=%d\n",
 
             // Window
-            static_cast<int>(g_config.windowed),
+            g_config.monitor,
             static_cast<int>(g_config.borderless),
             g_config.resolutionW,
             g_config.resolutionH,
@@ -361,7 +361,7 @@ namespace ssa
 
         // -- Config
         // Window
-        g_config.windowed = getInt(L"Window", L"Windowed", 1) != 0;
+        g_config.monitor = std::max(0, getInt(L"Window", L"Monitor", 0));
         g_config.borderless = getInt(L"Window", L"Borderless", 1) != 0;
         g_config.resolutionW = getInt(L"Window", L"ResolutionW", 0);
         g_config.resolutionH = getInt(L"Window", L"ResolutionH", 0);
@@ -576,9 +576,9 @@ namespace ssa
         SaveConfig();
     }
 
-    inline void SetWindowed(bool value)
+    inline void SetMonitor(int value)
     {
-        g_config.windowed = value;
+        g_config.monitor = std::max(0, value);
         SaveConfig();
     }
 

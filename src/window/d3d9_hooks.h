@@ -9,6 +9,7 @@
 #include "log.h"
 #include "MinHook.h"
 #include "window_hooks.h"
+#include "monitor.h"
 #include "texture_mods.h"
 #include "state_cache.h"
 #include "async_readback.h"
@@ -93,6 +94,7 @@ namespace ssa::D3D9Hooks
     inline UINT g_bbHeight = 0;
     inline IDirect3DDevice9* g_d3dDevice = nullptr;
     inline DWORD g_mainThreadId = 0;
+    inline HWND g_hFocusWindow = nullptr; // focus window the game created the device with (ImGui's window)
 
     // internal resolution the game uses for its 3D scene pipeline
     static constexpr UINT k_internalW = 1120;
@@ -171,19 +173,19 @@ namespace ssa::D3D9Hooks
     {
         if (!pp) return;
 
-        if (g_config.windowed) {
-            pp->Windowed = TRUE;
-            pp->FullScreen_RefreshRateInHz = 0;
-        }
+        // fullscreen is not supported, always run windowed
+        pp->Windowed = TRUE;
+        pp->FullScreen_RefreshRateInHz = 0;
 
-        bool hasCustomRes = g_config.resolutionW > 0 && g_config.resolutionH > 0;
+        const bool hasCustomRes = g_config.resolutionW > 0 && g_config.resolutionH > 0;
 
-        if (g_config.windowed && g_config.borderless) {
-            // always fill the desktop; fall back to desktop res if no custom res set
-            pp->BackBufferWidth  = hasCustomRes ? g_config.resolutionW : GetSystemMetrics(SM_CXSCREEN);
-            pp->BackBufferHeight = hasCustomRes ? g_config.resolutionH : GetSystemMetrics(SM_CYSCREEN);
+        if (g_config.borderless) {
+            // always fill the target monitor; fall back to its native res if no custom res set
+            const Monitor::Target& mon = Monitor::Get();
+            pp->BackBufferWidth  = hasCustomRes ? g_config.resolutionW : mon.width();
+            pp->BackBufferHeight = hasCustomRes ? g_config.resolutionH : mon.height();
         } else if (hasCustomRes) {
-            // plain windowed with custom res, or fullscreen with custom res: apply it
+            // plain windowed with custom res: apply it
             pp->BackBufferWidth  = g_config.resolutionW;
             pp->BackBufferHeight = g_config.resolutionH;
         }
@@ -569,15 +571,66 @@ namespace ssa::D3D9Hooks
     }
 
     // -------------------------------------------------------------------------
+    // Window diagnostics (multi-monitor / mixed DPI debugging)
+    // -------------------------------------------------------------------------
+    inline void LogWindowDiagnostics(const char* tag)
+    {
+        if (g_config.logLevel < LogLevel::DEBUG)
+            return;
+
+        WindowHooks::LogWindowState(tag, g_hFocusWindow);
+        LogDebug("[WinDiag:%s] backbuffer %ux%u (what the mod asked for)", tag, g_bbWidth, g_bbHeight);
+
+        // what the device really has, which can differ from what was requested
+        if (g_d3dDevice)
+        {
+            D3DDEVICE_CREATION_PARAMETERS cp = {};
+            if (SUCCEEDED(g_d3dDevice->GetCreationParameters(&cp)))
+                LogDebug("[WinDiag:%s] device adapter ordinal %u, focus window %p", tag, cp.AdapterOrdinal, static_cast<void*>(cp.hFocusWindow));
+
+            IDirect3DSurface9* bb = nullptr;
+            if (SUCCEEDED(g_d3dDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &bb)) && bb)
+            {
+                D3DSURFACE_DESC d = {};
+                bb->GetDesc(&d);
+                LogDebug("[WinDiag:%s] actual backbuffer %ux%u", tag, d.Width, d.Height);
+                bb->Release();
+            }
+
+            IDirect3DSwapChain9* sc = nullptr;
+            if (SUCCEEDED(g_d3dDevice->GetSwapChain(0, &sc)) && sc)
+            {
+                D3DPRESENT_PARAMETERS spp = {};
+                if (SUCCEEDED(sc->GetPresentParameters(&spp)))
+                    LogDebug("[WinDiag:%s] swapchain params %ux%u windowed=%d deviceWindow=%p interval=0x%X", tag,
+                        spp.BackBufferWidth, spp.BackBufferHeight, spp.Windowed, static_cast<void*>(spp.hDeviceWindow), spp.PresentationInterval);
+                sc->Release();
+            }
+
+            D3DVIEWPORT9 vp = {};
+            if (SUCCEEDED(g_d3dDevice->GetViewport(&vp)))
+                LogDebug("[WinDiag:%s] current viewport (%lu,%lu) %lux%lu", tag, vp.X, vp.Y, vp.Width, vp.Height);
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Hook: Present - FPS limiter, window setup, init deferred hooks + execute game hooks
     // -------------------------------------------------------------------------
     inline HRESULT WINAPI hook_Present(IDirect3DDevice9* pDevice, const RECT* pSourceRect, const RECT* pDestRect,
         HWND hDestWindowOverride, const RGNDATA* pDirtyRegion)
     {
         static bool s_windowSetup = false;
-        if (!s_windowSetup && g_config.windowed) {
+        if (!s_windowSetup) {
             WindowHooks::TrySetupGameWindow();
             s_windowSetup = (WindowHooks::g_hGameWindow != nullptr);
+        }
+
+        // window state snapshots: first frame with a window & later once game has settled (also after every Reset)
+        static int s_diagFrame = 0;
+        if (s_windowSetup && g_mainThreadId == GetCurrentThreadId()) {
+            ++s_diagFrame;
+            if (s_diagFrame == 1) LogWindowDiagnostics("first frame");
+            else if (s_diagFrame == 600) LogWindowDiagnostics("frame 600");
         }
 
         // LoadScreen runs on its own thread (Update/Draw/Sleep(29)) while the main thread loads
@@ -698,7 +751,8 @@ namespace ssa::D3D9Hooks
             if (SUCCEEDED(pDevice->GetCreationParameters(&params)))
             {
                 // initialize imgui
-                UI::Get()->Initialize();
+                UI::Get()->Initialize(params.hFocusWindow);
+                g_hFocusWindow = params.hFocusWindow;
                 ImGui_ImplWin32_Init(params.hFocusWindow);
                 ImGui_ImplDX9_Init(pDevice);
 
@@ -761,7 +815,20 @@ namespace ssa::D3D9Hooks
             ImGui_ImplDX9_CreateDeviceObjects();
         }
 
+        if (SUCCEEDED(hr))
+            LogWindowDiagnostics("after Reset");
+
         return hr;
+    }
+
+    // D3D9 adapter ordinal that drives the target monitor
+    inline UINT FindAdapter(IDirect3D9* d3d, UINT requested)
+    {
+        const HMONITOR want = Monitor::Get().handle;
+        if (!want) return requested;
+        for (UINT i = 0; i < d3d->GetAdapterCount(); ++i)
+            if (d3d->GetAdapterMonitor(i) == want) return i;
+        return requested;
     }
 
     // -------------------------------------------------------------------------
@@ -770,6 +837,8 @@ namespace ssa::D3D9Hooks
     inline HRESULT WINAPI hook_CreateDevice(IDirect3D9* pD3D, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow,
         DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pp, IDirect3DDevice9** ppDevice)
     {
+        Adapter = FindAdapter(pD3D, Adapter);
+        Log("[D3D9] Using adapter %u", Adapter);
         ApplyPresentParams(pp);
 
         HRESULT hr = orig_CreateDevice(pD3D, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pp, ppDevice);

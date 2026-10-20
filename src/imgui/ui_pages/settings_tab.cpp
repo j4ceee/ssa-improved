@@ -4,6 +4,7 @@
 #include "config.h"
 #include "addresses.h"
 #include "window/texture_mods.h"
+#include "window/monitor.h"
 
 namespace ssa::UIPages
 {
@@ -227,27 +228,44 @@ namespace ssa::UIPages
             ImGui::Spacing();
 
 
-            // windowed mode
-            bool windowed = g_config.windowed;
-            if (ImGui::Checkbox("Windowed Mode", &windowed))
-                SetWindowed(windowed);
-            ImGui::SameLine();
-            UI::HelpMarker("Runs the game in a window instead of fullscreen.",
-                       "Requires game restart");
+            // monitor
+            {
+                const auto monitors = Monitor::Enumerate();
+                char preview[64] = "Primary monitor";
+                if (g_config.monitor > 0)
+                    snprintf(preview, sizeof(preview), "Display %d (not found)", g_config.monitor);
+                for (const auto& m : monitors)
+                    if (g_config.monitor > 0 && m.number == g_config.monitor)
+                        snprintf(preview, sizeof(preview), "Display %d (%dx%d)", m.number, m.rect.right - m.rect.left, m.rect.bottom - m.rect.top);
 
+                if (ImGui::BeginCombo("Monitor", preview))
+                {
+                    if (ImGui::Selectable("Primary monitor", g_config.monitor == 0))
+                        SetMonitor(0);
+                    for (const auto& m : monitors)
+                    {
+                        char label[64];
+                        snprintf(label, sizeof(label), "Display %d%s (%dx%d)", m.number, m.primary ? " - primary" : "", m.rect.right - m.rect.left, m.rect.bottom - m.rect.top);
+                        if (ImGui::Selectable(label, g_config.monitor == m.number))
+                            SetMonitor(m.number);
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                UI::HelpMarker("The monitor the game opens on. If it can't be found, the primary monitor is used.",
+                               "Requires game restart");
+            }
 
             // borderless windowed mode
-            ImGui::BeginDisabled(!g_config.windowed);
             {
                 bool borderless = g_config.borderless;
                 if (ImGui::Checkbox("Borderless", &borderless))
                     SetBorderless(borderless);
                 ImGui::SameLine();
                 UI::HelpMarker(
-                    "Removes the window border and title bar when in windowed mode for a more seamless experience.",
-                    "Requires game restart & windowed mode");
+                    "Removes the window border and title bar for a more seamless experience.",
+                    "Requires game restart");
             }
-            ImGui::EndDisabled();
 
 
             // resolution

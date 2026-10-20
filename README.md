@@ -43,7 +43,7 @@
 - Customizable main-menu music and corrected late-game hub music
 
 ### Graphics
-- Windowed & borderless windowed mode on Windows
+- Framed & borderless window modes on Windows
 - Custom resolution support
 - VSync toggle
 - FPS cap

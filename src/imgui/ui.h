@@ -18,8 +18,8 @@ namespace ssa
             return &instance;
         }
 
-        void Initialize();
-        void SetupUiLook();
+        void Initialize(HWND hWnd);
+        void SetupUiLook(HWND hWnd);
         void Shutdown();
         void Render();
 
